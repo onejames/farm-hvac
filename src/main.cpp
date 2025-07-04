@@ -116,7 +116,7 @@ void loop() {
 
     dataManager->readAllSensors(hvacData, ADC_SAMPLES_COUNT);
     DataAnalyzer::process(hvacData, AMPS_ON_THRESHOLD);
-    networkManager->publish(*mqttAdapter, AWS_IOT_TOPIC, hvacData);
+    NetworkManager::publish(*mqttAdapter, AWS_IOT_TOPIC, hvacData);
     dataManager->printStatus(hvacData);
   }
 
