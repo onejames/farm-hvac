@@ -1,5 +1,6 @@
 import subprocess
 import datetime
+import re
 
 Import("env")
 
@@ -16,7 +17,7 @@ except:
 # Get the current date and time
 build_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-# Define the content of the header file
+# --- 1. Update version.h for the firmware ---
 header_content = f"""
 #ifndef VERSION_H
 #define VERSION_H
@@ -28,5 +29,24 @@ header_content = f"""
 """
 
 # Write the content to a version.h file in the include directory
-with open("include/version.h", "w") as f:
-    f.write(header_content)
+with open("include/version.h", "w") as header_file:
+    header_file.write(header_content)
+
+# --- 2. Update README.md for documentation ---
+readme_path = "README.md"
+try:
+    with open(readme_path, "r") as readme_file:
+        readme_content = readme_file.read()
+
+    # The new line to be inserted
+    new_version_line = f"**Version:** {version} (Built: {build_date})"
+
+    # Use regex to find the old version line and replace it
+    # This regex looks for "**Version:**" followed by any characters until the end of the line.
+    updated_readme_content = re.sub(r"(\*\*Version:\*\*.*)", new_version_line, readme_content)
+
+    with open(readme_path, "w") as readme_file:
+        readme_file.write(updated_readme_content)
+    print(f"Updated {readme_path} with version {version}")
+except Exception as e:
+    print(f"Warning: Could not update {readme_path}: {e}")
