@@ -15,7 +15,7 @@ public:
 
     void setup(HVACData& data);
     void handleClient();
-    static bool publish(IMqttClient& client, const char* topic, const HVACData& data);
+    static bool publish(IMqttClient& client, const char* topic, const HVACData& data, const char* version, const char* buildDate);
 
 private:
     WiFiClientSecure& _net;

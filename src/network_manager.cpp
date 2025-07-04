@@ -42,24 +42,33 @@ void NetworkManager::setup(HVACData& data) {
   _client.setServer(AWS_IOT_ENDPOINT, 8883);
 
   // Setup the web server
-  _server.on("/", HTTP_GET, [&data](AsyncWebServerRequest *request) {
-    String html = HtmlBuilder::build(data, FIRMWARE_VERSION);
+  // Serve the static HTML shell
+  _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String html = HtmlBuilder::build();
     request->send(200, "text/html", html);
   });
+
+  // Serve the data API endpoint
+  _server.on("/api/data", HTTP_GET, [&data](AsyncWebServerRequest *request) {
+    char buffer[512];
+    size_t len = JsonBuilder::buildPayload(data, FIRMWARE_VERSION, BUILD_DATE, buffer, sizeof(buffer));
+    request->send(200, "application/json", String(buffer, len));
+  });
+
   _server.begin();
   Serial.println("[SETUP] Web server started.");
 }
 #endif // ARDUINO
 
-bool NetworkManager::publish(IMqttClient& client, const char* topic, const HVACData& data) {
+bool NetworkManager::publish(IMqttClient& client, const char* topic, const HVACData& data, const char* version, const char* buildDate) {
   if (!client.connected()) {
     // Silently return if not connected. The handleMqttClient function will show reconnection messages.
     return false;
   }
 
   // Use the dedicated builder to create the payload
-  char payload[256];
-  size_t payload_size = JsonBuilder::buildPayload(data, payload, sizeof(payload));
+  char payload[512];
+  size_t payload_size = JsonBuilder::buildPayload(data, version, buildDate, payload, sizeof(payload));
 
   if (payload_size == 0) return false; // JSON serialization failed
 

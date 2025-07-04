@@ -8,6 +8,6 @@ struct HVACData;
 
 class HtmlBuilder {
 public:
-    static String build(const HVACData& data, const char* version);
+    static String build();
 };
 #endif // HTML_BUILDER_H

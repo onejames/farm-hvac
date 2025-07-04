@@ -48,8 +48,11 @@ void test_publish_sends_correct_json_payload(void) {
     data.airflowStatus = "OK";
     data.alertStatus = "NONE";
 
+    const char* test_version = "v-test-1";
+    const char* test_build_date = "2025-10-26";
+
     // 2. Act
-    bool result = NetworkManager::publish(mockClient, AWS_IOT_TOPIC, data);
+    bool result = NetworkManager::publish(mockClient, AWS_IOT_TOPIC, data, test_version, test_build_date);
 
     // 3. Assert
     TEST_ASSERT_TRUE(mockClient.publish_was_called);
@@ -72,6 +75,8 @@ void test_publish_sends_correct_json_payload(void) {
     TEST_ASSERT_EQUAL_STRING("OFF", doc["geoPumpsStatus"]);
     TEST_ASSERT_EQUAL_STRING("NONE", doc["alertStatus"]);
     TEST_ASSERT_EQUAL_STRING("OK", doc["airflowStatus"]);
+    TEST_ASSERT_EQUAL_STRING(test_version, doc["version"]);
+    TEST_ASSERT_EQUAL_STRING(test_build_date, doc["buildDate"]);
 }
 
 void test_publish_does_not_send_when_disconnected(void) {
@@ -81,7 +86,7 @@ void test_publish_does_not_send_when_disconnected(void) {
     HVACData data; // Content doesn't matter
 
     // 2. Act
-    bool result = NetworkManager::publish(mockClient, AWS_IOT_TOPIC, data);
+    bool result = NetworkManager::publish(mockClient, AWS_IOT_TOPIC, data, "v", "d");
 
     // 3. Assert
     TEST_ASSERT_FALSE(mockClient.publish_was_called);
@@ -95,7 +100,7 @@ void test_publish_returns_false_when_client_publish_fails(void) {
     HVACData data; // Content doesn't matter
 
     // 2. Act
-    bool result = NetworkManager::publish(mockClient, AWS_IOT_TOPIC, data);
+    bool result = NetworkManager::publish(mockClient, AWS_IOT_TOPIC, data, "v", "d");
 
     // 3. Assert
     TEST_ASSERT_TRUE(mockClient.publish_was_called); // It should still be called

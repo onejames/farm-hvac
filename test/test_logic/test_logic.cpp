@@ -80,10 +80,12 @@ void test_buildPayload_creates_correct_json(void) {
     data.airflowStatus = "OK";
     data.alertStatus = "NONE";
 
-    char buffer[256];
+    const char* version = "v-test";
+    const char* buildDate = "2024-01-01";
+    char buffer[512];
 
     // 2. Act
-    size_t length = JsonBuilder::buildPayload(data, buffer, sizeof(buffer));
+    size_t length = JsonBuilder::buildPayload(data, version, buildDate, buffer, sizeof(buffer));
 
     // 3. Assert
     TEST_ASSERT_GREATER_THAN(0, length);
@@ -103,43 +105,29 @@ void test_buildPayload_creates_correct_json(void) {
     TEST_ASSERT_EQUAL_STRING("OFF", doc["geoPumpsStatus"]);
     TEST_ASSERT_EQUAL_STRING("OK", doc["airflowStatus"]);
     TEST_ASSERT_EQUAL_STRING("NONE", doc["alertStatus"]);
+    TEST_ASSERT_EQUAL_STRING("v-test", doc["version"]);
+    TEST_ASSERT_EQUAL_STRING("2024-01-01", doc["buildDate"]);
 }
 
 // --- HtmlBuilder Tests ---
 
 void test_html_builder_contains_correct_data(void) {
     // 1. Arrange
-    HVACData data;
-    data.returnTempC = 25.5;
-    data.fanStatus = "ON";
-    data.fanAmps = 1.23;
-    data.alertStatus = "ALERT: Something is wrong";
-    const char* version = "v1.2.3-test";
+    // No data needed, we are just building the static shell
 
     // 2. Act
-    String html = HtmlBuilder::build(data, version);
+    String html = HtmlBuilder::build();
 
     // 3. Assert
-    // We don't need to test the entire HTML structure, just that our data is present.
-    TEST_ASSERT_NOT_NULL(strstr(html.c_str(), "Return Air: 25.5"));
-    TEST_ASSERT_NOT_NULL(strstr(html.c_str(), "Fan: ON (1.23 A)"));
-    TEST_ASSERT_NOT_NULL(strstr(html.c_str(), "Alerts: ALERT: Something is wrong"));
-    TEST_ASSERT_NOT_NULL(strstr(html.c_str(), "Version: v1.2.3-test"));
-    // Verify the JavaScript refresh was added and the meta tag was removed
-    TEST_ASSERT_NOT_NULL(strstr(html.c_str(), "<script>setTimeout"));
-    TEST_ASSERT_NULL(strstr(html.c_str(), "http-equiv='refresh'"));
-}
-
-void test_html_builder_handles_default_data(void) {
-    // 1. Arrange
-    HVACData data = {}; // Default initialized data
-
-    // 2. Act
-    String html = HtmlBuilder::build(data, "v-default");
-
-    // 3. Assert - just make sure it doesn't crash and contains some default values
-    TEST_ASSERT_NOT_NULL(strstr(html.c_str(), "Return Air: -127.0"));
-    TEST_ASSERT_NOT_NULL(strstr(html.c_str(), "Fan: OFF (0.00 A)"));
+    // We just need to verify that the placeholder spans and the script exist.
+    // In native C++, std::string::find is used instead of Arduino's String::indexOf.
+    TEST_ASSERT_TRUE(html.find("id=\"returnTemp\"") != std::string::npos);
+    TEST_ASSERT_TRUE(html.find("id=\"fanStatus\"") != std::string::npos);
+    TEST_ASSERT_TRUE(html.find("id=\"alerts\"") != std::string::npos);
+    TEST_ASSERT_TRUE(html.find("id=\"version\"") != std::string::npos);
+    TEST_ASSERT_TRUE(html.find("id=\"buildDate\"") != std::string::npos);
+    TEST_ASSERT_TRUE(html.find("<script>") != std::string::npos);
+    TEST_ASSERT_TRUE(html.find("fetch('/api/data')") != std::string::npos);
 }
 
 // This main function is the entry point for this specific test suite.
@@ -158,7 +146,6 @@ int main(int argc, char **argv) {
 
     // Run HtmlBuilder tests
     RUN_TEST(test_html_builder_contains_correct_data);
-    RUN_TEST(test_html_builder_handles_default_data);
 
     return UNITY_END();
 }

@@ -2,9 +2,9 @@
 #include "hvac_data.h"
 #include <ArduinoJson.h>
 
-size_t JsonBuilder::buildPayload(const HVACData& data, char* buffer, size_t bufferSize) {
+size_t JsonBuilder::buildPayload(const HVACData& data, const char* version, const char* buildDate, char* buffer, size_t bufferSize) {
   // Per ArduinoJson v7, StaticJsonDocument is deprecated. JsonDocument is preferred.
-  JsonDocument doc;
+  JsonDocument doc; // Size will be adjusted automatically
 
   // Set the values. ArduinoJson will format floats correctly.
   doc["returnTempC"] = data.returnTempC;
@@ -18,6 +18,8 @@ size_t JsonBuilder::buildPayload(const HVACData& data, char* buffer, size_t buff
   doc["geoPumpsStatus"] = data.geoPumpsStatus;
   doc["airflowStatus"] = data.airflowStatus;
   doc["alertStatus"] = data.alertStatus;
+  doc["version"] = version;
+  doc["buildDate"] = buildDate;
 
   // Serialize the JSON document to the provided buffer
   return serializeJson(doc, buffer, bufferSize);
