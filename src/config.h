@@ -14,5 +14,6 @@ extern const int PUMPS_CT_PIN;
 extern const float AMPS_ON_THRESHOLD;
 extern const float CT_CALIBRATION;
 extern const unsigned long SENSOR_READ_INTERVAL_MS;
+extern const int ADC_SAMPLES_COUNT;
 
 #endif // CONFIG_H

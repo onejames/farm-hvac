@@ -41,6 +41,7 @@ const int PUMPS_CT_PIN = 32;
 const float AMPS_ON_THRESHOLD = 0.5;
 const float CT_CALIBRATION = 60.6;
 const unsigned long SENSOR_READ_INTERVAL_MS = 5000;
+const int ADC_SAMPLES_COUNT = 1480;
 
 // -------------------
 // GLOBAL OBJECTS (Hardware & Network Clients)
@@ -86,9 +87,9 @@ void loop() {
   if (millis() - lastSensorReadTime >= SENSOR_READ_INTERVAL_MS) {
     lastSensorReadTime = millis();
 
-    readTemperatureSensors(hvacData);
-    readCurrentSensors(hvacData);
-    processSensorData(hvacData);
+    readTemperatureSensors(hvacData, tempSensors, returnAirSensorAddress, supplyAirSensorAddress);
+    readCurrentSensors(hvacData, fanMonitor, compressorMonitor, pumpsMonitor);
+    processSensorData(hvacData); // No objects needed here, just the data
     publishMessage(hvacData);
     printStatus(hvacData);
   }
