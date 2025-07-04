@@ -28,6 +28,8 @@
 #include "hvac_data.h"
 #include "data_processing.h"
 #include "network_manager.h"
+#include "adapters/dallas_temperature_adapter.h"
+#include "adapters/emon_lib_adapter.h"
 
 // -------------------
 // CONFIGURATION DEFINITIONS
@@ -59,6 +61,12 @@ EnergyMonitor pumpsMonitor;
 DeviceAddress returnAirSensorAddress = { 0x28, 0xFF, 0x64, 0x1E, 0x34, 0x1A, 0x2, 0x9A };
 DeviceAddress supplyAirSensorAddress = { 0x28, 0xFF, 0x64, 0x1E, 0x34, 0x1A, 0x2, 0x9B };
 
+// -- Adapter Objects for Dependency Injection
+DallasTemperatureAdapter* tempAdapter = nullptr;
+EmonLibAdapter* fanAdapter = nullptr;
+EmonLibAdapter* compressorAdapter = nullptr;
+EmonLibAdapter* pumpsAdapter = nullptr;
+
 // -- Manager Objects (will be initialized in setup)
 // Using pointers allows us to construct them in setup() after hardware is initialized.
 // For a device that runs forever, we don't need to worry about `delete`.
@@ -83,8 +91,14 @@ void setup() {
   pumpsMonitor.current(PUMPS_CT_PIN, CT_CALIBRATION);
   Serial.println("[SETUP] All sensors initialized.");
 
+  // -- Create adapter instances that wrap the real hardware libraries
+  tempAdapter = new DallasTemperatureAdapter(tempSensors);
+  fanAdapter = new EmonLibAdapter(fanMonitor);
+  compressorAdapter = new EmonLibAdapter(compressorMonitor);
+  pumpsAdapter = new EmonLibAdapter(pumpsMonitor);
+
   // -- Initialize Manager Objects with their dependencies
-  dataManager = new DataManager(tempSensors, fanMonitor, compressorMonitor, pumpsMonitor, returnAirSensorAddress, supplyAirSensorAddress);
+  dataManager = new DataManager(*tempAdapter, *fanAdapter, *compressorAdapter, *pumpsAdapter, returnAirSensorAddress, supplyAirSensorAddress);
   networkManager = new NetworkManager(net, client, server);
 
   // -- Initialize Network and Web Services
@@ -96,8 +110,8 @@ void loop() {
   if (millis() - lastSensorReadTime >= SENSOR_READ_INTERVAL_MS) {
     lastSensorReadTime = millis();
 
-    dataManager->readAllSensors(hvacData);
-    dataManager->processSensorData(hvacData);
+    dataManager->readAllSensors(hvacData, ADC_SAMPLES_COUNT);
+    DataManager::processSensorData(hvacData, AMPS_ON_THRESHOLD);
     networkManager->publish(hvacData);
     dataManager->printStatus(hvacData);
   }

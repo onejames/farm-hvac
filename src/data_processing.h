@@ -1,25 +1,25 @@
 #ifndef DATA_PROCESSING_H
 #define DATA_PROCESSING_H
 
-#include <DallasTemperature.h>
-#include "EmonLib.h"
 #include "hvac_data.h"
+#include "interfaces/i_temperature_sensor.h"
+#include "interfaces/i_current_sensor.h"
 
 class DataManager {
 public:
-    DataManager(DallasTemperature& tempSensors, EnergyMonitor& fan,
-                EnergyMonitor& compressor, EnergyMonitor& pumps,
+    DataManager(ITemperatureSensor& tempSensors, ICurrentSensor& fan,
+                ICurrentSensor& compressor, ICurrentSensor& pumps,
                 const DeviceAddress& returnAddr, const DeviceAddress& supplyAddr);
 
-    void readAllSensors(HVACData& data);
-    void processSensorData(HVACData& data);
+    void readAllSensors(HVACData& data, unsigned int adcSamples);
+    static void processSensorData(HVACData& data, float ampsOnThreshold);
     void printStatus(const HVACData& data);
 
 private:
-    DallasTemperature& _tempSensors;
-    EnergyMonitor& _fanMonitor;
-    EnergyMonitor& _compressorMonitor;
-    EnergyMonitor& _pumpsMonitor;
+    ITemperatureSensor& _tempSensors;
+    ICurrentSensor& _fanMonitor;
+    ICurrentSensor& _compressorMonitor;
+    ICurrentSensor& _pumpsMonitor;
     const DeviceAddress& _returnAddr;
     const DeviceAddress& _supplyAddr;
 };

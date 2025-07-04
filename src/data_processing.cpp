@@ -1,10 +1,7 @@
-#include <Arduino.h>
 #include "data_processing.h"
 
-#include "config.h"
-
-DataManager::DataManager(DallasTemperature& tempSensors, EnergyMonitor& fan,
-                         EnergyMonitor& compressor, EnergyMonitor& pumps,
+DataManager::DataManager(ITemperatureSensor& tempSensors, ICurrentSensor& fan,
+                         ICurrentSensor& compressor, ICurrentSensor& pumps,
                          const DeviceAddress& returnAddr, const DeviceAddress& supplyAddr)
     : _tempSensors(tempSensors),
       _fanMonitor(fan),
@@ -13,29 +10,27 @@ DataManager::DataManager(DallasTemperature& tempSensors, EnergyMonitor& fan,
       _returnAddr(returnAddr),
       _supplyAddr(supplyAddr) {}
 
-void DataManager::readAllSensors(HVACData& data) {
+void DataManager::readAllSensors(HVACData& data, unsigned int adcSamples) {
   // Read Temperatures
   _tempSensors.requestTemperatures();
   data.returnTempC = _tempSensors.getTempC(_returnAddr);
   data.supplyTempC = _tempSensors.getTempC(_supplyAddr);
 
-  // Handle sensor read errors
-  if (data.returnTempC == DEVICE_DISCONNECTED_C) {
-    data.returnTempC = -127.0; // Use a known error value
-    Serial.println("[ERROR] Failed to read return air temperature sensor.");
-  }
-  if (data.supplyTempC == DEVICE_DISCONNECTED_C) {
-    data.supplyTempC = -127.0; // Use a known error value
-    Serial.println("[ERROR] Failed to read supply air temperature sensor.");
-  }
-
   // Read Currents
-  data.fanAmps = _fanMonitor.calcIrms(ADC_SAMPLES_COUNT);
-  data.compressorAmps = _compressorMonitor.calcIrms(ADC_SAMPLES_COUNT);
-  data.geoPumpsAmps = _pumpsMonitor.calcIrms(ADC_SAMPLES_COUNT);
+  data.fanAmps = _fanMonitor.calcIrms(adcSamples);
+  data.compressorAmps = _compressorMonitor.calcIrms(adcSamples);
+  data.geoPumpsAmps = _pumpsMonitor.calcIrms(adcSamples);
 }
 
-void DataManager::processSensorData(HVACData& data) {
+#ifdef ARDUINO
+#include <Arduino.h> // For Serial.printf
+void DataManager::printStatus(const HVACData& data) {
+  Serial.printf("Temps: Ret=%.1fC, Sup=%.1fC, dT=%.1fC | Amps: Fan=%.2f, Comp=%.2f, Pump=%.2f | Alert: %s\n",
+    data.returnTempC, data.supplyTempC, data.deltaT, data.fanAmps, data.compressorAmps, data.geoPumpsAmps, data.alertStatus.c_str());
+}
+#endif // ARDUINO
+
+void DataManager::processSensorData(HVACData& data, float ampsOnThreshold) {
   // Calculate Delta T
   if (data.returnTempC != -127.0 && data.supplyTempC != -127.0) {
     data.deltaT = data.returnTempC - data.supplyTempC; // Assumes cooling mode
@@ -44,9 +39,9 @@ void DataManager::processSensorData(HVACData& data) {
   }
 
   // Determine Component Status based on amperage
-  data.fanStatus = (data.fanAmps > AMPS_ON_THRESHOLD) ? "ON" : "OFF";
-  data.compressorStatus = (data.compressorAmps > AMPS_ON_THRESHOLD) ? "ON" : "OFF";
-  data.geoPumpsStatus = (data.geoPumpsAmps > AMPS_ON_THRESHOLD) ? "ON" : "OFF";
+  data.fanStatus = (data.fanAmps > ampsOnThreshold) ? "ON" : "OFF";
+  data.compressorStatus = (data.compressorAmps > ampsOnThreshold) ? "ON" : "OFF";
+  data.geoPumpsStatus = (data.geoPumpsAmps > ampsOnThreshold) ? "ON" : "OFF";
 
   // Determine Airflow Status (Placeholder for actual sensor)
   if (data.fanStatus == "ON") {
@@ -61,9 +56,4 @@ void DataManager::processSensorData(HVACData& data) {
   } else {
       data.alertStatus = "NONE";
   }
-}
-
-void DataManager::printStatus(const HVACData& data) {
-  Serial.printf("Temps: Ret=%.1fC, Sup=%.1fC, dT=%.1fC | Amps: Fan=%.2f, Comp=%.2f, Pump=%.2f | Alert: %s\n",
-    data.returnTempC, data.supplyTempC, data.deltaT, data.fanAmps, data.compressorAmps, data.geoPumpsAmps, data.alertStatus.c_str());
 }
