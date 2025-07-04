@@ -77,7 +77,7 @@ void setup() {
   Serial.println("[SETUP] All sensors initialized.");
 
   // -- Initialize Network and Web Services
-  connectAWS();
+  setupNetwork();
   setupWebServer(hvacData); // Pass our data struct to the web server setup
 }
 
