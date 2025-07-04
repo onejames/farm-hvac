@@ -5,14 +5,23 @@
 #include "EmonLib.h"
 #include "hvac_data.h"
 
-// Function declarations for sensor reading and data processing
-void readTemperatureSensors(HVACData& data, DallasTemperature& tempSensors,
-                            const DeviceAddress& returnAddr, const DeviceAddress& supplyAddr);
+class DataManager {
+public:
+    DataManager(DallasTemperature& tempSensors, EnergyMonitor& fan,
+                EnergyMonitor& compressor, EnergyMonitor& pumps,
+                const DeviceAddress& returnAddr, const DeviceAddress& supplyAddr);
 
-void readCurrentSensors(HVACData& data, EnergyMonitor& fan,
-                        EnergyMonitor& compressor, EnergyMonitor& pumps);
+    void readAllSensors(HVACData& data);
+    void processSensorData(HVACData& data);
+    void printStatus(const HVACData& data);
 
-void processSensorData(HVACData& data); // Combines calculation and status determination
-void printStatus(const HVACData& data);
+private:
+    DallasTemperature& _tempSensors;
+    EnergyMonitor& _fanMonitor;
+    EnergyMonitor& _compressorMonitor;
+    EnergyMonitor& _pumpsMonitor;
+    const DeviceAddress& _returnAddr;
+    const DeviceAddress& _supplyAddr;
+};
 
 #endif // DATA_PROCESSING_H

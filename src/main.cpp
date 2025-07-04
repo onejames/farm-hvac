@@ -59,6 +59,12 @@ EnergyMonitor pumpsMonitor;
 DeviceAddress returnAirSensorAddress = { 0x28, 0xFF, 0x64, 0x1E, 0x34, 0x1A, 0x2, 0x9A };
 DeviceAddress supplyAirSensorAddress = { 0x28, 0xFF, 0x64, 0x1E, 0x34, 0x1A, 0x2, 0x9B };
 
+// -- Manager Objects (will be initialized in setup)
+// Using pointers allows us to construct them in setup() after hardware is initialized.
+// For a device that runs forever, we don't need to worry about `delete`.
+DataManager* dataManager = nullptr;
+NetworkManager* networkManager = nullptr;
+
 // -------------------
 // GLOBAL STATE
 // -------------------
@@ -77,9 +83,12 @@ void setup() {
   pumpsMonitor.current(PUMPS_CT_PIN, CT_CALIBRATION);
   Serial.println("[SETUP] All sensors initialized.");
 
+  // -- Initialize Manager Objects with their dependencies
+  dataManager = new DataManager(tempSensors, fanMonitor, compressorMonitor, pumpsMonitor, returnAirSensorAddress, supplyAirSensorAddress);
+  networkManager = new NetworkManager(net, client, server);
+
   // -- Initialize Network and Web Services
-  setupNetwork();
-  setupWebServer(hvacData); // Pass our data struct to the web server setup
+  networkManager->setup(hvacData);
 }
 
 void loop() {
@@ -87,13 +96,12 @@ void loop() {
   if (millis() - lastSensorReadTime >= SENSOR_READ_INTERVAL_MS) {
     lastSensorReadTime = millis();
 
-    readTemperatureSensors(hvacData, tempSensors, returnAirSensorAddress, supplyAirSensorAddress);
-    readCurrentSensors(hvacData, fanMonitor, compressorMonitor, pumpsMonitor);
-    processSensorData(hvacData); // No objects needed here, just the data
-    publishMessage(hvacData);
-    printStatus(hvacData);
+    dataManager->readAllSensors(hvacData);
+    dataManager->processSensorData(hvacData);
+    networkManager->publish(hvacData);
+    dataManager->printStatus(hvacData);
   }
 
   // Keep network clients running
-  handleMqttClient();
+  networkManager->handleClient();
 }

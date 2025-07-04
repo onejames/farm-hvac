@@ -3,29 +3,25 @@
 
 #include "hvac_data.h"
 
-/**
- * @brief Sets up Wi-Fi connection and configures AWS IoT certificates.
- * This is a blocking function intended to be called once from setup().
- */
-void setupNetwork();
+// Forward declarations to avoid including heavy headers here
+class WiFiClientSecure;
+class PubSubClient;
+class AsyncWebServer;
 
-/**
- * @brief Handles the MQTT client connection state. Should be called in the main loop.
- * Manages non-blocking reconnection logic.
- */
-void handleMqttClient();
+class NetworkManager {
+public:
+    NetworkManager(WiFiClientSecure& net, PubSubClient& client, AsyncWebServer& server);
 
-/**
- * @brief Publishes the HVAC data to AWS IoT as a JSON payload.
- * @param data The HVACData struct containing the latest sensor readings.
- */
-void publishMessage(const HVACData& data);
+    void setup(HVACData& data);
+    void handleClient();
+    void publish(const HVACData& data);
 
-/**
- * @brief Sets up the asynchronous web server to display HVAC data.
- * @param data A reference to the HVACData struct to ensure the web page
- *             always displays the most current data.
- */
-void setupWebServer(HVACData& data);
+private:
+    WiFiClientSecure& _net;
+    PubSubClient& _client;
+    AsyncWebServer& _server;
+
+    unsigned long _lastMqttReconnectAttempt = 0;
+};
 
 #endif // NETWORK_MANAGER_H
