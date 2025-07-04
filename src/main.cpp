@@ -30,6 +30,8 @@
 #include "network_manager.h"
 #include "adapters/dallas_temperature_adapter.h"
 #include "adapters/emon_lib_adapter.h"
+#include "adapters/pubsub_client_adapter.h"
+#include "logic/data_analyzer.h"
 
 // -------------------
 // CONFIGURATION DEFINITIONS
@@ -66,6 +68,7 @@ DallasTemperatureAdapter* tempAdapter = nullptr;
 EmonLibAdapter* fanAdapter = nullptr;
 EmonLibAdapter* compressorAdapter = nullptr;
 EmonLibAdapter* pumpsAdapter = nullptr;
+PubSubClientAdapter* mqttAdapter = nullptr;
 
 // -- Manager Objects (will be initialized in setup)
 // Using pointers allows us to construct them in setup() after hardware is initialized.
@@ -96,6 +99,7 @@ void setup() {
   fanAdapter = new EmonLibAdapter(fanMonitor);
   compressorAdapter = new EmonLibAdapter(compressorMonitor);
   pumpsAdapter = new EmonLibAdapter(pumpsMonitor);
+  mqttAdapter = new PubSubClientAdapter(client);
 
   // -- Initialize Manager Objects with their dependencies
   dataManager = new DataManager(*tempAdapter, *fanAdapter, *compressorAdapter, *pumpsAdapter, returnAirSensorAddress, supplyAirSensorAddress);
@@ -111,8 +115,8 @@ void loop() {
     lastSensorReadTime = millis();
 
     dataManager->readAllSensors(hvacData, ADC_SAMPLES_COUNT);
-    DataManager::processSensorData(hvacData, AMPS_ON_THRESHOLD);
-    networkManager->publish(hvacData);
+    DataAnalyzer::process(hvacData, AMPS_ON_THRESHOLD);
+    networkManager->publish(*mqttAdapter, AWS_IOT_TOPIC, hvacData);
     dataManager->printStatus(hvacData);
   }
 

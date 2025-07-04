@@ -1,6 +1,6 @@
 #include <unity.h>
 #include "hvac_data.h"
-#include "data_processing.h"
+#include "logic/data_analyzer.h"
 
 // The setUp and tearDown functions are called before and after each test.
 void setUp(void) {
@@ -16,7 +16,7 @@ void test_process_data_calculates_delta_t_correctly(void) {
     data.returnTempC = 25.0;
     data.supplyTempC = 18.5;
 
-    DataManager::processSensorData(data, 0.5f);
+    DataAnalyzer::process(data, 0.5f);
 
     TEST_ASSERT_EQUAL_FLOAT(6.5, data.deltaT);
 }
@@ -26,7 +26,7 @@ void test_process_data_handles_sensor_error_for_delta_t(void) {
     data.returnTempC = -127.0; // Error code
     data.supplyTempC = 18.5;
 
-    DataManager::processSensorData(data, 0.5f);
+    DataAnalyzer::process(data, 0.5f);
 
     TEST_ASSERT_EQUAL_FLOAT(0.0, data.deltaT);
 }
@@ -37,7 +37,7 @@ void test_process_data_sets_status_off_when_amps_are_low(void) {
     data.compressorAmps = 0.0;
     data.geoPumpsAmps = 0.49;
 
-    DataManager::processSensorData(data, 0.5f);
+    DataAnalyzer::process(data, 0.5f);
 
     TEST_ASSERT_EQUAL_STRING("OFF", data.fanStatus.c_str());
     TEST_ASSERT_EQUAL_STRING("OFF", data.compressorStatus.c_str());
@@ -50,7 +50,7 @@ void test_process_data_sets_status_on_when_amps_are_high(void) {
     data.compressorAmps = 5.5;
     data.geoPumpsAmps = 0.51;
 
-    DataManager::processSensorData(data, 0.5f);
+    DataAnalyzer::process(data, 0.5f);
 
     TEST_ASSERT_EQUAL_STRING("ON", data.fanStatus.c_str());
     TEST_ASSERT_EQUAL_STRING("ON", data.compressorStatus.c_str());
@@ -61,7 +61,7 @@ void test_process_data_sets_airflow_and_alert_status_correctly(void) {
     HVACData data = {};
     data.fanAmps = 2.0; // Fan is ON
 
-    DataManager::processSensorData(data, 0.5f);
+    DataAnalyzer::process(data, 0.5f);
 
     // With the fan ON, airflow should be "OK" and there should be no alert.
     TEST_ASSERT_EQUAL_STRING("ON", data.fanStatus.c_str());
@@ -70,7 +70,7 @@ void test_process_data_sets_airflow_and_alert_status_correctly(void) {
 
     // Now test with fan OFF
     data.fanAmps = 0.1; // Fan is OFF
-    DataManager::processSensorData(data, 0.5f);
+    DataAnalyzer::process(data, 0.5f);
     TEST_ASSERT_EQUAL_STRING("OFF", data.fanStatus.c_str());
     TEST_ASSERT_EQUAL_STRING("N/A", data.airflowStatus.c_str());
     TEST_ASSERT_EQUAL_STRING("NONE", data.alertStatus.c_str());

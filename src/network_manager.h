@@ -6,6 +6,7 @@
 // Forward declarations to avoid including heavy headers here
 class WiFiClientSecure;
 class PubSubClient;
+class IMqttClient;
 class AsyncWebServer;
 
 class NetworkManager {
@@ -14,7 +15,7 @@ public:
 
     void setup(HVACData& data);
     void handleClient();
-    void publish(const HVACData& data);
+    bool publish(IMqttClient& client, const char* topic, const HVACData& data);
 
 private:
     WiFiClientSecure& _net;

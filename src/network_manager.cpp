@@ -1,12 +1,14 @@
 #include "network_manager.h"
-#include "secrets.h"
 #include "hvac_data.h"
+#include "interfaces/i_mqtt_client.h"
+#include "logic/json_builder.h"
 
 // Required libraries for this module
+#ifdef ARDUINO
+#include "secrets.h"
 #include <WiFiClientSecure.h>
 #include <ESPAsyncWebServer.h>
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
 
 const long mqttReconnectInterval = 5000; // Attempt reconnect every 5 seconds
 
@@ -54,39 +56,30 @@ void NetworkManager::setup(HVACData& data) {
   _server.begin();
   Serial.println("[SETUP] Web server started.");
 }
+#endif // ARDUINO
 
-void NetworkManager::publish(const HVACData& data) {
-  if (!_client.connected()) {
+bool NetworkManager::publish(IMqttClient& client, const char* topic, const HVACData& data) {
+  if (!client.connected()) {
     // Silently return if not connected. The handleMqttClient function will show reconnection messages.
-    return;
+    return false;
   }
 
-  // Use ArduinoJson to create a safe and efficient payload.
-  // The size (256) is an estimate. Adjust if you add more fields.
-  StaticJsonDocument<256> doc;
-
-  // Set the values. ArduinoJson will format floats correctly.
-  doc["returnTempC"] = data.returnTempC;
-  doc["supplyTempC"] = data.supplyTempC;
-  doc["deltaT"] = data.deltaT;
-  doc["fanAmps"] = data.fanAmps;
-  doc["compressorAmps"] = data.compressorAmps;
-  doc["geoPumpsAmps"] = data.geoPumpsAmps;
-  doc["fanStatus"] = data.fanStatus;
-  doc["compressorStatus"] = data.compressorStatus;
-  doc["geoPumpsStatus"] = data.geoPumpsStatus;
-  doc["airflowStatus"] = data.airflowStatus;
-  doc["alertStatus"] = data.alertStatus;
-
-  // Serialize the JSON document to a char buffer
+  // Use the dedicated builder to create the payload
   char payload[256];
-  size_t n = serializeJson(doc, payload);
+  size_t payload_size = JsonBuilder::buildPayload(data, payload, sizeof(payload));
 
-  if (!_client.publish(AWS_IOT_TOPIC, payload, n)) {
+  if (payload_size == 0) return false; // JSON serialization failed
+
+  if (!client.publish(topic, payload, payload_size)) {
+#ifdef ARDUINO
       Serial.println("[MQTT] Publish failed. Message may be too large for MQTT buffer.");
+#endif
+      return false;
   }
+  return true;
 }
 
+#ifdef ARDUINO
 void NetworkManager::handleClient() {
   if (!_client.connected()) {
     long now = millis();
@@ -105,3 +98,4 @@ void NetworkManager::handleClient() {
     _client.loop();
   }
 }
+#endif // ARDUINO

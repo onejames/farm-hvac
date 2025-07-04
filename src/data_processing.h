@@ -12,7 +12,6 @@ public:
                 const DeviceAddress& returnAddr, const DeviceAddress& supplyAddr);
 
     void readAllSensors(HVACData& data, unsigned int adcSamples);
-    static void processSensorData(HVACData& data, float ampsOnThreshold);
     void printStatus(const HVACData& data);
 
 private:
