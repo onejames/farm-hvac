@@ -2,6 +2,7 @@
 #include "hvac_data.h"
 #include "interfaces/i_mqtt_client.h"
 #include "logic/json_builder.h"
+#include "logic/html_builder.h"
 
 // Required libraries for this module
 #ifdef ARDUINO
@@ -9,6 +10,7 @@
 #include <WiFiClientSecure.h>
 #include <ESPAsyncWebServer.h>
 #include <PubSubClient.h>
+#include "version.h" // For FIRMWARE_VERSION
 
 const long mqttReconnectInterval = 5000; // Attempt reconnect every 5 seconds
 
@@ -40,18 +42,9 @@ void NetworkManager::setup(HVACData& data) {
   _client.setServer(AWS_IOT_ENDPOINT, 8883);
 
   // Setup the web server
-  _server.on("/", HTTP_GET, [&data](AsyncWebServerRequest *request){
-    AsyncResponseStream *response = request->beginResponseStream("text/html");
-    response->print("<!DOCTYPE html><html><head><title>HVAC Monitor</title>");
-    response->print("<meta http-equiv='refresh' content='5'></head><body>");
-    response->printf("<h1>HVAC Real-Time Status</h1><h2>Temperatures</h2><p>Return Air: %.1f &deg;C</p>", data.returnTempC);
-    response->printf("<p>Supply Air: %.1f &deg;C</p><p><b>Delta T: %.1f &deg;C</b></p>", data.supplyTempC, data.deltaT);
-    response->print("<h2>Component Status</h2>");
-    response->printf("<p>Fan: %s (%.2f A)</p>", data.fanStatus.c_str(), data.fanAmps);
-    response->printf("<p>Compressor: %s (%.2f A)</p>", data.compressorStatus.c_str(), data.compressorAmps);
-    response->printf("<p>Geothermal Pumps: %s (%.2f A)</p><h2>System</h2>", data.geoPumpsStatus.c_str(), data.geoPumpsAmps);
-    response->printf("<p>Airflow: %s</p><p><b>Alerts: %s</b></p></body></html>", data.airflowStatus.c_str(), data.alertStatus.c_str());
-    request->send(response);
+  _server.on("/", HTTP_GET, [&data](AsyncWebServerRequest *request) {
+    String html = HtmlBuilder::build(data, FIRMWARE_VERSION);
+    request->send(200, "text/html", html);
   });
   _server.begin();
   Serial.println("[SETUP] Web server started.");

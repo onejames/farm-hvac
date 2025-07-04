@@ -1,6 +1,6 @@
 # HVAC Monitoring System for ESP32
 
-**Version:** 1.0
+**Version:** 0.3
 
 ## Introduction
 

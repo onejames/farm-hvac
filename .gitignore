@@ -1,5 +1,6 @@
 # PlatformIO build artifacts
 .pio
+include/version.h
 
 # VSCode editor settings
 .vscode/
