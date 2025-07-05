@@ -6,10 +6,12 @@
 
 class PubSubClientAdapter : public IMqttClient {
 public:
-    PubSubClientAdapter(PubSubClient& client);
+    explicit PubSubClientAdapter(PubSubClient& client);
     bool connected() override;
-    bool publish(const char* topic, const char* payload, size_t length) override;
+    bool publish(const char* topic, const uint8_t* payload, size_t length) override;
+
 private:
     PubSubClient& _client;
 };
+
 #endif // PUBSUB_CLIENT_ADAPTER_H

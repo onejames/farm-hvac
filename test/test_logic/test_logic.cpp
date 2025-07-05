@@ -2,7 +2,6 @@
 #include "hvac_data.h"
 #include "logic/data_analyzer.h"
 #include "logic/json_builder.h"
-#include "logic/html_builder.h"
 #include <ArduinoJson.h>
 
 // The setUp and tearDown functions are called before and after each test.
@@ -109,27 +108,6 @@ void test_buildPayload_creates_correct_json(void) {
     TEST_ASSERT_EQUAL_STRING("2024-01-01", doc["buildDate"]);
 }
 
-// --- HtmlBuilder Tests ---
-
-void test_html_builder_contains_correct_data(void) {
-    // 1. Arrange
-    // No data needed, we are just building the static shell
-
-    // 2. Act
-    String html = HtmlBuilder::build();
-
-    // 3. Assert
-    // We just need to verify that the placeholder spans and the script exist.
-    // In native C++, std::string::find is used instead of Arduino's String::indexOf.
-    TEST_ASSERT_TRUE(html.find("id=\"returnTemp\"") != std::string::npos);
-    TEST_ASSERT_TRUE(html.find("id=\"fanStatus\"") != std::string::npos);
-    TEST_ASSERT_TRUE(html.find("id=\"alerts\"") != std::string::npos);
-    TEST_ASSERT_TRUE(html.find("id=\"version\"") != std::string::npos);
-    TEST_ASSERT_TRUE(html.find("id=\"buildDate\"") != std::string::npos);
-    TEST_ASSERT_TRUE(html.find("<script>") != std::string::npos);
-    TEST_ASSERT_TRUE(html.find("fetch('/api/data')") != std::string::npos);
-}
-
 // This main function is the entry point for this specific test suite.
 int main(int argc, char **argv) {
     UNITY_BEGIN();
@@ -143,9 +121,6 @@ int main(int argc, char **argv) {
 
     // Run JsonBuilder tests
     RUN_TEST(test_buildPayload_creates_correct_json);
-
-    // Run HtmlBuilder tests
-    RUN_TEST(test_html_builder_contains_correct_data);
 
     return UNITY_END();
 }

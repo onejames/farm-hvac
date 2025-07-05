@@ -6,9 +6,10 @@
 
 class DallasTemperatureAdapter : public ITemperatureSensor {
 public:
-    DallasTemperatureAdapter(DallasTemperature& sensor);
+    explicit DallasTemperatureAdapter(DallasTemperature& sensor);
     void requestTemperatures() override;
     float getTempC(const DeviceAddress& address) override;
+
 private:
     DallasTemperature& _sensor;
 };

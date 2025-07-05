@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HVAC Monitor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>HVAC Real-Time Status</h1>
+        <h2>Temperatures</h2>
+        <p>Return Air: <span id="returnTemp" class="data-point">--</span> &deg;C</p>
+        <p>Supply Air: <span id="supplyTemp" class="data-point">--</span> &deg;C</p>
+        <p><b>Delta T: <span id="deltaT" class="data-point">--</span> &deg;C</b></p>
+        <h2>Component Status</h2>
+        <p>Fan: <span id="fanStatus" class="data-point">--</span> (<span id="fanAmps" class="data-point">--</span> A)</p>
+        <p>Compressor: <span id="compressorStatus" class="data-point">--</span> (<span id="compressorAmps" class="data-point">--</span> A)</p>
+        <p>Geothermal Pumps: <span id="pumpsStatus" class="data-point">--</span> (<span id="pumpsAmps" class="data-point">--</span> A)</p>
+        <h2>System</h2>
+        <p>Airflow: <span id="airflow" class="data-point">--</span></p>
+        <p><b>Alerts: <span id="alerts" class="data-point">--</span></b></p>
+        <div class="footer">
+            <p><i>Version: <span id="version">--</span> (Built: <span id="buildDate">--</span>)</i></p>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

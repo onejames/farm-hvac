@@ -6,7 +6,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
-#include "network_manager.h" // For NetworkManager::publish
+#include "network/network_manager.h" // For publishMqttMessage
 #include "adapters/pubsub_client_adapter.h"
 #include "hvac_data.h"
 
@@ -62,7 +62,7 @@ void test_publish_to_aws_succeeds(void) {
 
     // 2. Act
     Serial.println("Publishing test message...");
-    bool result = NetworkManager::publish(mqttAdapter, AWS_IOT_TOPIC, testData);
+    bool result = publishMqttMessage(mqttAdapter, AWS_IOT_TOPIC, testData, "e2e-test", "2025-01-01");
 
     // 3. Assert
     TEST_ASSERT_TRUE_MESSAGE(result, "NetworkManager::publish returned false.");

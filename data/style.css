@@ -1,0 +1,28 @@
+body { 
+    font-family: sans-serif; 
+    background-color: #f4f4f4; 
+    color: #333; 
+    margin: 0;
+    padding: 1em;
+}
+.container { 
+    max-width: 600px; 
+    margin: auto; 
+    background: white; 
+    padding: 20px; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+}
+h1, h2 { 
+    color: #0056b3; 
+}
+.data-point { 
+    font-weight: bold; 
+    color: #d9534f; 
+}
+.footer { 
+    font-size: 0.8em; 
+    color: #777; 
+    text-align: center; 
+    margin-top: 20px; 
+}
