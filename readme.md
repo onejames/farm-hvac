@@ -1,14 +1,14 @@
 # HVAC Monitoring System for ESP32
 
-**Version:** v0.3.1-1-g3e7123a (Built: 2025-07-04 18:37:29)
+**Version:** v0.3.1-2-g376e3db (Built: 2025-07-04 21:17:46)
 
 ## Introduction
 
->  
-> The pirmary motivation for this was to spend some time with CA to both gain some experience as well as attepmt to assertain if and how it was applicable for existant large code-base projects.
 >
->  This was written primairly by Gemini Code Assist in VS Code. That would inclide the bulk of this and other plain-text files.
->  
+> This was written primairly by Gemini Code Assist in VS Code. That would include the bulk of this and other plain-text files.
+>    
+> The pirmary motivation for this was to spend some time with CA to both gain some experience as well as attempt to assertain if and how it was applicable for existant large code-base projects.
+>
 
 ## Description
 
