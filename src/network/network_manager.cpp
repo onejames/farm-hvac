@@ -2,6 +2,7 @@
 #include "logic/json_builder.h"
 #include "config/config_manager.h"
 #include "config.h"
+#include "logic/settings_validator.h"
 #include <WiFi.h>
 #include <SPIFFS.h>
 #include "secrets.h"
@@ -98,21 +99,18 @@ void NetworkManager::setupWebInterface() {
     // Route to post new settings
     AsyncCallbackJsonWebHandler* settingsPostHandler = new AsyncCallbackJsonWebHandler("/api/settings", [this](AsyncWebServerRequest *request, JsonVariant &json) {
         JsonObject jsonObj = json.as<JsonObject>();
-        AppConfig& config = _configManager.getConfig();
         
-        if (jsonObj.containsKey("lowDeltaTThreshold")) {
-            config.lowDeltaTThreshold = jsonObj["lowDeltaTThreshold"].as<float>();
+        ValidationResult result = SettingsValidator::validateAndApply(jsonObj, _configManager.getConfig());
+
+        if (result.success) {
+            _configManager.save();
+            request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Settings saved.\"}");
+        } else {
+            // Use a C-style string for the format to avoid String object creation in the lambda
+            char errorPayload[128];
+            snprintf(errorPayload, sizeof(errorPayload), "{\"status\":\"error\", \"message\":\"%s\"}", result.message.c_str());
+            request->send(400, "application/json", errorPayload);
         }
-        if (jsonObj.containsKey("lowDeltaTDurationS")) {
-            config.lowDeltaTDurationS = jsonObj["lowDeltaTDurationS"].as<unsigned int>();
-        }
-        if (jsonObj.containsKey("noAirflowDurationS")) {
-            config.noAirflowDurationS = jsonObj["noAirflowDurationS"].as<unsigned int>();
-        }
-        
-        _configManager.save();
-        
-        request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Settings saved.\"}");
     });
     settingsPostHandler->setMethod(HTTP_POST);
     _server.addHandler(settingsPostHandler);

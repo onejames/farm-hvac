@@ -30,15 +30,22 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             body: JSON.stringify(settings),
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if the request was successful. If not, parse the error.
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || 'Validation failed on server.'); });
+            }
+            return response.json();
+        })
         .then(data => {
             messageDiv.textContent = data.message || 'Settings saved!';
             messageDiv.className = 'message success';
             setTimeout(() => { messageDiv.className = 'message'; }, 3000);
         })
         .catch(error => {
-            messageDiv.textContent = 'Error saving settings.';
+            messageDiv.textContent = error.message || 'Error saving settings.';
             messageDiv.className = 'message error';
+            // The error is already displayed, but we log it for debugging.
             console.error('Error saving settings:', error);
         });
     });
