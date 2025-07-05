@@ -20,9 +20,10 @@ void JsonBuilder::serializeHvacDataToJson(JsonObject& doc, const HVACData& data)
 size_t JsonBuilder::buildPayload(const HVACData& data, const char* version, const char* buildDate, char* buffer, size_t bufferSize) {
     // Per ArduinoJson v7, StaticJsonDocument is deprecated. JsonDocument is preferred.
     JsonDocument doc; // Size will be adjusted automatically
-    serializeHvacDataToJson(doc.to<JsonObject>(), data);
-    doc["version"] = version;
-    doc["buildDate"] = buildDate;
+    JsonObject root = doc.to<JsonObject>();
+    serializeHvacDataToJson(root, data);
+    root["version"] = version;
+    root["buildDate"] = buildDate;
 
     // Serialize the JSON document to the provided buffer
     return serializeJson(doc, buffer, bufferSize);

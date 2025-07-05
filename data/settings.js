@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('lowDeltaTThreshold').value = data.lowDeltaTThreshold;
             document.getElementById('lowDeltaTDurationS').value = data.lowDeltaTDurationS;
             document.getElementById('noAirflowDurationS').value = data.noAirflowDurationS;
+            document.getElementById('tempSensorDisconnectedDurationS').value = data.tempSensorDisconnectedDurationS;
         })
         .catch(error => console.error('Error fetching settings:', error));
 
@@ -20,7 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const settings = {
             lowDeltaTThreshold: parseFloat(formData.get('lowDeltaTThreshold')),
             lowDeltaTDurationS: parseInt(formData.get('lowDeltaTDurationS'), 10),
-            noAirflowDurationS: parseInt(formData.get('noAirflowDurationS'), 10)
+            noAirflowDurationS: parseInt(formData.get('noAirflowDurationS'), 10),
+            tempSensorDisconnectedDurationS: parseInt(formData.get('tempSensorDisconnectedDurationS'), 10)
         };
 
         fetch('/api/settings', {

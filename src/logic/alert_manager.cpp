@@ -4,6 +4,7 @@
 AlertStatus AlertManager::checkAlerts(const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const AppConfig& config) {
     int fanOnNoAirflowCount = 0;
     int lowDeltaTCount = 0;
+    int tempSensorDisconnectedCount = 0;
 
     for (const auto& data : dataBuffer) {
         if (!data.isInitialized) {
@@ -19,11 +20,21 @@ AlertStatus AlertManager::checkAlerts(const std::array<HVACData, DATA_BUFFER_SIZ
         if (data.compressorStatus == ComponentStatus::ON && data.deltaT < config.lowDeltaTThreshold) {
             lowDeltaTCount++;
         }
+
+        // Check for disconnected temperature sensor
+        if (data.returnTempC == -127.0f || data.supplyTempC == -127.0f) {
+            tempSensorDisconnectedCount++;
+        }
     }
 
     // Convert counts to duration in seconds
     float fanOnNoAirflowDuration = fanOnNoAirflowCount * (SENSOR_READ_INTERVAL_MS / 1000.0f);
     float lowDeltaTDuration = lowDeltaTCount * (SENSOR_READ_INTERVAL_MS / 1000.0f);
+    float tempSensorDisconnectedDuration = tempSensorDisconnectedCount * (SENSOR_READ_INTERVAL_MS / 1000.0f);
+
+    if (tempSensorDisconnectedDuration >= config.tempSensorDisconnectedDurationS) {
+        return AlertStatus::TEMP_SENSOR_DISCONNECTED;
+    }
 
     // Check if durations exceed thresholds
     if (fanOnNoAirflowDuration >= config.noAirflowDurationS) {

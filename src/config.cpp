@@ -19,6 +19,7 @@ const unsigned long SENSOR_READ_INTERVAL_MS = 5000;
 const float LOW_DELTA_T_THRESHOLD = 2.0f;      // Degrees C
 const unsigned int LOW_DELTA_T_DURATION_S = 300; // 5 minutes
 const unsigned int NO_AIRFLOW_DURATION_S = 60;   // 1 minute
+const unsigned int TEMP_SENSOR_DISCONNECTED_DURATION_S = 30; // 30 seconds
 
 // Watchdog Timer
 const unsigned int WATCHDOG_TIMEOUT_S = 15; // seconds

@@ -12,6 +12,7 @@ void test_validateAndApply_accepts_valid_data() {
     doc["lowDeltaTThreshold"] = 5.5f;
     doc["lowDeltaTDurationS"] = 120;
     doc["noAirflowDurationS"] = 90;
+    doc["tempSensorDisconnectedDurationS"] = 45;
 
     ValidationResult result = SettingsValidator::validateAndApply(doc.as<JsonObject>(), config);
 
@@ -19,6 +20,7 @@ void test_validateAndApply_accepts_valid_data() {
     TEST_ASSERT_EQUAL_FLOAT(5.5f, config.lowDeltaTThreshold);
     TEST_ASSERT_EQUAL_UINT(120, config.lowDeltaTDurationS);
     TEST_ASSERT_EQUAL_UINT(90, config.noAirflowDurationS);
+    TEST_ASSERT_EQUAL_UINT(45, config.tempSensorDisconnectedDurationS);
 }
 
 void test_validateAndApply_rejects_low_delta_t_threshold() {
@@ -65,8 +67,19 @@ void test_validateAndApply_rejects_high_duration() {
     TEST_ASSERT_EQUAL_STRING("Invalid No Airflow duration. Must be between 10 and 3600 seconds.", result.message.c_str());
 }
 
+void test_validateAndApply_rejects_high_temp_sensor_duration() {
+    AppConfig config;
+    JsonDocument doc;
+    doc["tempSensorDisconnectedDurationS"] = 9999;
+
+    ValidationResult result = SettingsValidator::validateAndApply(doc.as<JsonObject>(), config);
+
+    TEST_ASSERT_FALSE(result.success);
+    TEST_ASSERT_EQUAL_STRING("Invalid Temp Sensor Disconnected duration. Must be between 10 and 3600 seconds.", result.message.c_str());
+}
+
 void test_validateAndApply_handles_partial_update() {
-    AppConfig config = {2.0f, 300, 60}; // Set initial values
+    AppConfig config = {2.0f, 300, 60, 30}; // Set initial values
 
     JsonDocument doc;
     doc["lowDeltaTDurationS"] = 500; // Only update one value
@@ -77,6 +90,7 @@ void test_validateAndApply_handles_partial_update() {
     TEST_ASSERT_EQUAL_FLOAT(2.0f, config.lowDeltaTThreshold); // Should be unchanged
     TEST_ASSERT_EQUAL_UINT(500, config.lowDeltaTDurationS);   // Should be updated
     TEST_ASSERT_EQUAL_UINT(60, config.noAirflowDurationS);    // Should be unchanged
+    TEST_ASSERT_EQUAL_UINT(30, config.tempSensorDisconnectedDurationS); // Should be unchanged
 }
 
 int main(int argc, char **argv) {
@@ -86,6 +100,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_validateAndApply_rejects_high_delta_t_threshold);
     RUN_TEST(test_validateAndApply_rejects_low_duration);
     RUN_TEST(test_validateAndApply_rejects_high_duration);
+    RUN_TEST(test_validateAndApply_rejects_high_temp_sensor_duration);
     RUN_TEST(test_validateAndApply_handles_partial_update);
     return UNITY_END();
 }

@@ -14,6 +14,7 @@ void test_checkAlerts_no_alert_on_normal_conditions() {
     config.lowDeltaTThreshold = 2.0f;
     config.lowDeltaTDurationS = 300;
     config.noAirflowDurationS = 60;
+    config.tempSensorDisconnectedDurationS = 30;
 
     buffer.fill(HVACData());
     for (int i = 0; i < DATA_BUFFER_SIZE; ++i) {
@@ -34,6 +35,7 @@ void test_checkAlerts_triggers_fan_no_airflow_alert() {
     config.lowDeltaTThreshold = 2.0f;
     config.lowDeltaTDurationS = 300;
     config.noAirflowDurationS = (DATA_BUFFER_SIZE * SENSOR_READ_INTERVAL_MS / 1000) - 1; // Ensure duration is met
+    config.tempSensorDisconnectedDurationS = 30;
 
     std::array<HVACData, DATA_BUFFER_SIZE> buffer;
     buffer.fill(HVACData());
@@ -55,6 +57,7 @@ void test_checkAlerts_triggers_low_delta_t_alert() {
     config.lowDeltaTThreshold = 2.0f;
     config.lowDeltaTDurationS = (DATA_BUFFER_SIZE * SENSOR_READ_INTERVAL_MS / 1000) - 1; // Ensure duration is met
     config.noAirflowDurationS = 60;
+    config.tempSensorDisconnectedDurationS = 30;
 
     std::array<HVACData, DATA_BUFFER_SIZE> buffer;
     buffer.fill(HVACData());
@@ -76,6 +79,7 @@ void test_checkAlerts_does_not_trigger_if_duration_is_too_short() {
     config.lowDeltaTThreshold = 2.0f;
     config.lowDeltaTDurationS = 300;
     config.noAirflowDurationS = 60;
+    config.tempSensorDisconnectedDurationS = 30;
 
     std::array<HVACData, DATA_BUFFER_SIZE> buffer;
     buffer.fill(HVACData());
@@ -89,11 +93,31 @@ void test_checkAlerts_does_not_trigger_if_duration_is_too_short() {
     TEST_ASSERT_EQUAL(AlertStatus::NONE, result);
 }
 
+void test_checkAlerts_triggers_temp_sensor_disconnected_alert() {
+    AppConfig config;
+    config.lowDeltaTThreshold = 2.0f;
+    config.lowDeltaTDurationS = 300;
+    config.noAirflowDurationS = 60;
+    config.tempSensorDisconnectedDurationS = (DATA_BUFFER_SIZE * SENSOR_READ_INTERVAL_MS / 1000) - 1; // Ensure duration is met
+
+    std::array<HVACData, DATA_BUFFER_SIZE> buffer;
+    buffer.fill(HVACData());
+    for (int i = 0; i < DATA_BUFFER_SIZE; ++i) {
+        buffer[i].isInitialized = true;
+        buffer[i].returnTempC = -127.0f; // Disconnected
+    }
+
+    AlertStatus result = AlertManager::checkAlerts(buffer, config);
+
+    TEST_ASSERT_EQUAL(AlertStatus::TEMP_SENSOR_DISCONNECTED, result);
+}
+
 int main(int argc, char **argv) {
     UNITY_BEGIN();
     RUN_TEST(test_checkAlerts_no_alert_on_normal_conditions);
     RUN_TEST(test_checkAlerts_triggers_fan_no_airflow_alert);
     RUN_TEST(test_checkAlerts_triggers_low_delta_t_alert);
     RUN_TEST(test_checkAlerts_does_not_trigger_if_duration_is_too_short);
+    RUN_TEST(test_checkAlerts_triggers_temp_sensor_disconnected_alert);
     return UNITY_END();
 }

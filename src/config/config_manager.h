@@ -6,6 +6,7 @@ struct AppConfig {
     float lowDeltaTThreshold;
     unsigned int lowDeltaTDurationS;
     unsigned int noAirflowDurationS;
+    unsigned int tempSensorDisconnectedDurationS;
 };
 
 class ConfigManager {

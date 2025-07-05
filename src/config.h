@@ -27,6 +27,7 @@ constexpr size_t AGGREGATED_DATA_BUFFER_SIZE = 32;
 extern const float LOW_DELTA_T_THRESHOLD;
 extern const unsigned int LOW_DELTA_T_DURATION_S;
 extern const unsigned int NO_AIRFLOW_DURATION_S;
+extern const unsigned int TEMP_SENSOR_DISCONNECTED_DURATION_S;
 
 // Watchdog Timer
 extern const unsigned int WATCHDOG_TIMEOUT_S;

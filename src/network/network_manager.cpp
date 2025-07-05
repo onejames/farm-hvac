@@ -92,6 +92,7 @@ void NetworkManager::setupWebInterface() {
         root["lowDeltaTThreshold"] = config.lowDeltaTThreshold;
         root["lowDeltaTDurationS"] = config.lowDeltaTDurationS;
         root["noAirflowDurationS"] = config.noAirflowDurationS;
+        root["tempSensorDisconnectedDurationS"] = config.tempSensorDisconnectedDurationS;
         response->setLength();
         request->send(response);
     });

@@ -10,6 +10,7 @@ void ConfigManager::load() {
     _config.lowDeltaTThreshold = LOW_DELTA_T_THRESHOLD;
     _config.lowDeltaTDurationS = LOW_DELTA_T_DURATION_S;
     _config.noAirflowDurationS = NO_AIRFLOW_DURATION_S;
+    _config.tempSensorDisconnectedDurationS = TEMP_SENSOR_DISCONNECTED_DURATION_S;
 
     if (SPIFFS.begin(true) && SPIFFS.exists(CONFIG_FILE)) {
         File configFile = SPIFFS.open(CONFIG_FILE, "r");
@@ -20,6 +21,7 @@ void ConfigManager::load() {
                 _config.lowDeltaTThreshold = doc["lowDeltaTThreshold"] | LOW_DELTA_T_THRESHOLD;
                 _config.lowDeltaTDurationS = doc["lowDeltaTDurationS"] | LOW_DELTA_T_DURATION_S;
                 _config.noAirflowDurationS = doc["noAirflowDurationS"] | NO_AIRFLOW_DURATION_S;
+                _config.tempSensorDisconnectedDurationS = doc["tempSensorDisconnectedDurationS"] | TEMP_SENSOR_DISCONNECTED_DURATION_S;
                 Serial.println("Loaded configuration from SPIFFS.");
             } else {
                 Serial.println("Failed to parse config file, using defaults.");
@@ -43,6 +45,7 @@ void ConfigManager::save() {
     doc["lowDeltaTThreshold"] = _config.lowDeltaTThreshold;
     doc["lowDeltaTDurationS"] = _config.lowDeltaTDurationS;
     doc["noAirflowDurationS"] = _config.noAirflowDurationS;
+    doc["tempSensorDisconnectedDurationS"] = _config.tempSensorDisconnectedDurationS;
 
     if (serializeJson(doc, configFile) == 0) {
         Serial.println("Failed to write to config file.");

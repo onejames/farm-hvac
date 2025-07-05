@@ -25,5 +25,13 @@ ValidationResult SettingsValidator::validateAndApply(const JsonObject& jsonObj, 
         config.noAirflowDurationS = val;
     }
 
+    if (jsonObj.containsKey("tempSensorDisconnectedDurationS")) {
+        unsigned int val = jsonObj["tempSensorDisconnectedDurationS"].as<unsigned int>();
+        if (val < 10 || val > 3600) {
+            return {false, "Invalid Temp Sensor Disconnected duration. Must be between 10 and 3600 seconds."};
+        }
+        config.tempSensorDisconnectedDurationS = val;
+    }
+
     return {true, "Settings applied."};
 }

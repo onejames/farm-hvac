@@ -23,7 +23,10 @@ inline const char* toString(AirflowStatus status) {
 inline const char* toString(AlertStatus status) {
     switch (status) {
         case AlertStatus::NONE: return "NONE";
-        default:                return "UNKNOWN";
+        case AlertStatus::FAN_NO_AIRFLOW: return "FAN_NO_AIRFLOW";
+        case AlertStatus::LOW_DELTA_T: return "LOW_DELTA_T";
+        case AlertStatus::TEMP_SENSOR_DISCONNECTED: return "TEMP_SENSOR_DISCONNECTED";
+        default: return "UNKNOWN";
     }
 }
 
