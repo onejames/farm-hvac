@@ -118,11 +118,11 @@ void test_readAndProcessData_calculates_deltaT_and_statuses_correctly(void) {
     // 3. Assert
     // Assert on processed values
     TEST_ASSERT_EQUAL_FLOAT(6.5, data.deltaT);
-    TEST_ASSERT_EQUAL_STRING("ON", data.fanStatus.c_str());
-    TEST_ASSERT_EQUAL_STRING("ON", data.compressorStatus.c_str());
-    TEST_ASSERT_EQUAL_STRING("OFF", data.geoPumpsStatus.c_str());
-    TEST_ASSERT_EQUAL_STRING("OK", data.airflowStatus.c_str());
-    TEST_ASSERT_EQUAL_STRING("NONE", data.alertStatus.c_str());
+    TEST_ASSERT_EQUAL(ComponentStatus::ON, data.fanStatus);
+    TEST_ASSERT_EQUAL(ComponentStatus::ON, data.compressorStatus);
+    TEST_ASSERT_EQUAL(ComponentStatus::OFF, data.geoPumpsStatus);
+    TEST_ASSERT_EQUAL(AirflowStatus::OK, data.airflowStatus);
+    TEST_ASSERT_EQUAL(AlertStatus::NONE, data.alertStatus);
 }
 
 void test_readAndProcessData_handles_deltaT_with_sensor_error(void) {

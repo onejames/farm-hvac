@@ -56,9 +56,9 @@ void test_publish_to_aws_succeeds(void) {
     // Create the adapter and sample data
     PubSubClientAdapter mqttAdapter(client);
     HVACData testData;
-    testData.returnTempC = 99.9;
-    testData.fanStatus = "TESTING";
-    testData.alertStatus = "E2E_TEST_OK";
+    testData.returnTempC = 99.8; // Use a unique value for easy identification
+    testData.fanStatus = ComponentStatus::ON;
+    testData.alertStatus = AlertStatus::NONE; // Use a valid status
 
     // 2. Act
     Serial.println("Publishing test message...");

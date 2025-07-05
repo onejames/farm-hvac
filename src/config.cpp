@@ -14,5 +14,10 @@ const float AMPS_ON_THRESHOLD = 0.5f;
 const float CT_CALIBRATION = 60.606;
 const unsigned int ADC_SAMPLES = 1480;
 const unsigned long SENSOR_READ_INTERVAL_MS = 5000;
+
+// I2C Pins for OLED Display
+const int I2C_SDA_PIN = 21;
+const int I2C_SCL_PIN = 22;
+
 const DeviceAddress returnAirSensorAddress = {0x28, 0xFF, 0x64, 0x1E, 0x54, 0x3F, 0x2A, 0x9A};
 const DeviceAddress supplyAirSensorAddress = {0x28, 0xFF, 0x64, 0x1E, 0x55, 0x0A, 0x3C, 0x5A};

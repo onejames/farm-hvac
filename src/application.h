@@ -4,6 +4,7 @@
 #include "hvac_data.h"
 #include "data_processing.h"
 #include "network/network_manager.h"
+#include "display/display_manager.h"
 
 // Hardware Libraries
 #include <OneWire.h>
@@ -39,6 +40,8 @@ private:
     HVACData _hvacData;
     DataManager _dataManager;
     NetworkManager _networkManager;
+    DisplayManager _displayManager;
+    unsigned long _lastSensorReadTime;
 };
 
 #endif // APPLICATION_H

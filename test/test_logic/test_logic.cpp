@@ -23,11 +23,11 @@ void test_buildPayload_creates_correct_json(void) {
     data.fanAmps = 1.23;
     data.compressorAmps = 4.56;
     data.geoPumpsAmps = 0.78;
-    data.fanStatus = "ON";
-    data.compressorStatus = "ON";
-    data.geoPumpsStatus = "OFF";
-    data.airflowStatus = "OK";
-    data.alertStatus = "NONE";
+    data.fanStatus = ComponentStatus::ON;
+    data.compressorStatus = ComponentStatus::ON;
+    data.geoPumpsStatus = ComponentStatus::OFF;
+    data.airflowStatus = AirflowStatus::OK;
+    data.alertStatus = AlertStatus::NONE;
 
     const char* version = "v-test";
     const char* buildDate = "2024-01-01";

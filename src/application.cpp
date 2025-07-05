@@ -14,7 +14,10 @@ Application::Application()
       _pumpsAdapter(_pumpsMonitor),
     // Initialize logic and network managers
       _dataManager(_tempAdapter, _fanAdapter, _compressorAdapter, _pumpsAdapter, returnAirSensorAddress, supplyAirSensorAddress),
-      _networkManager(_hvacData) {}
+      _networkManager(_hvacData),
+      _displayManager() {
+          _lastSensorReadTime = 0;
+      }
 
 void Application::setup() {
     Serial.begin(115200);
@@ -30,14 +33,27 @@ void Application::setup() {
 
     // Setup network and web interface
     _networkManager.setup();
+    
+    // Setup display
+    _displayManager.setup();
 
     Serial.println("Setup complete. Entering main loop.");
 }
 
 void Application::loop() {
+    // Handle non-blocking network tasks on every loop
     _networkManager.handleClient();
 
-    _dataManager.readAndProcessData(_hvacData, ADC_SAMPLES, AMPS_ON_THRESHOLD);
-    _networkManager.publish();
-    _dataManager.printStatus(_hvacData);
+    // The main sensor read and publish cycle is throttled
+    unsigned long currentTime = millis();
+    if (currentTime - _lastSensorReadTime >= SENSOR_READ_INTERVAL_MS) {
+        _lastSensorReadTime = currentTime;
+
+        _dataManager.readAndProcessData(_hvacData, ADC_SAMPLES, AMPS_ON_THRESHOLD);
+        _networkManager.publish();
+        _dataManager.printStatus(_hvacData);
+    }
+
+    // The display can update on its own, more frequent schedule
+    _displayManager.update(_hvacData);
 }

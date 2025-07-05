@@ -1,4 +1,5 @@
 #include "data_processing.h"
+#include "logic/enum_converters.h" // For toString helpers
 
 DataManager::DataManager(ITemperatureSensor& tempSensors, ICurrentSensor& fan,
                          ICurrentSensor& compressor, ICurrentSensor& pumps,
@@ -29,21 +30,21 @@ void DataManager::readAndProcessData(HVACData& data, unsigned int adcSamples, fl
   }
 
   // Determine component status based on amperage
-  data.fanStatus = (data.fanAmps > ampsThreshold) ? "ON" : "OFF";
-  data.compressorStatus = (data.compressorAmps > ampsThreshold) ? "ON" : "OFF";
-  data.geoPumpsStatus = (data.geoPumpsAmps > ampsThreshold) ? "ON" : "OFF";
+  data.fanStatus = (data.fanAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
+  data.compressorStatus = (data.compressorAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
+  data.geoPumpsStatus = (data.geoPumpsAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
 
   // Basic airflow check and alert status
   // This is a placeholder. A real implementation would check an airflow sensor.
-  data.airflowStatus = (data.fanStatus == "ON") ? "OK" : "N/A";
+  data.airflowStatus = (data.fanStatus == ComponentStatus::ON) ? AirflowStatus::OK : AirflowStatus::NA;
   // For now, alerts are not implemented beyond this basic check.
-  data.alertStatus = "NONE";
+  data.alertStatus = AlertStatus::NONE;
 }
 
 #ifdef ARDUINO
 #include <Arduino.h> // For Serial.printf
 void DataManager::printStatus(const HVACData& data) {
   Serial.printf("Temps: Ret=%.1fC, Sup=%.1fC, dT=%.1fC | Amps: Fan=%.2f, Comp=%.2f, Pump=%.2f | Alert: %s\n",
-    data.returnTempC, data.supplyTempC, data.deltaT, data.fanAmps, data.compressorAmps, data.geoPumpsAmps, data.alertStatus.c_str());
+    data.returnTempC, data.supplyTempC, data.deltaT, data.fanAmps, data.compressorAmps, data.geoPumpsAmps, toString(data.alertStatus));
 }
 #endif // ARDUINO

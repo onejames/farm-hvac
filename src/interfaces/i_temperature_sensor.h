@@ -1,7 +1,7 @@
 #ifndef I_TEMPERATURE_SENSOR_H
 #define I_TEMPERATURE_SENSOR_H
 
-#include "hvac_data.h" // For DeviceAddress
+#include "hvac_hardware_types.h" // For DeviceAddress
 
 class ITemperatureSensor {
 public:

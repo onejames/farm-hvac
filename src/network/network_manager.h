@@ -24,7 +24,6 @@ private:
     PubSubClient _client;
     AsyncWebServer _server;
     unsigned long _lastMqttReconnectAttempt;
-    unsigned long _lastPublishTime;
 };
 
 #endif // NETWORK_MANAGER_H

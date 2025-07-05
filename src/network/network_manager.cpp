@@ -13,8 +13,7 @@ NetworkManager::NetworkManager(HVACData& data)
     : _hvacData(data),
       _client(_net),
       _server(80),
-      _lastMqttReconnectAttempt(0),
-      _lastPublishTime(0) {}
+      _lastMqttReconnectAttempt(0) {}
 
 void NetworkManager::setup() {
     setupWiFi();
@@ -87,12 +86,8 @@ void NetworkManager::handleClient() {
 }
 
 void NetworkManager::publish() {
-    unsigned long currentTime = millis();
-    if (currentTime - _lastPublishTime < SENSOR_READ_INTERVAL_MS) {
-        return; // Not time to publish yet
-    }
-    _lastPublishTime = currentTime;
-
+    // The timing is now handled by the Application class.
+    // This method is called at the correct interval.
     PubSubClientAdapter mqttAdapter(_client);
     publishMqttMessage(mqttAdapter, AWS_IOT_TOPIC, FIRMWARE_VERSION, BUILD_DATE);
 }
