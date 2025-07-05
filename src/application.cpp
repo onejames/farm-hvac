@@ -70,14 +70,9 @@ void Application::loop() {
 }
 
 void Application::performAggregation() {
-    // Use the dedicated aggregator to calculate the averages
-    AggregatedHVACData aggregatedData = DataAggregator::aggregate(_dataBuffer);
-
-    // The Application is still responsible for the final state and timestamp
+    // Use the dedicated aggregator to calculate the averages and capture final state
+    AggregatedHVACData aggregatedData = DataAggregator::aggregate(_dataBuffer, _hvacData);
     aggregatedData.timestamp = millis();
-    aggregatedData.lastFanStatus = _hvacData.fanStatus;
-    aggregatedData.lastCompressorStatus = _hvacData.compressorStatus;
-    aggregatedData.lastGeoPumpsStatus = _hvacData.geoPumpsStatus;
 
     _aggregatedDataBuffer[_aggregatedDataBufferIndex] = aggregatedData;
     _aggregatedDataBufferIndex = (_aggregatedDataBufferIndex + 1) % AGGREGATED_DATA_BUFFER_SIZE;

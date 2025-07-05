@@ -54,6 +54,9 @@ void DataManager::readAndProcessData(HVACData& data, unsigned int adcSamples, fl
   data.airflowStatus = (data.fanStatus == ComponentStatus::ON) ? AirflowStatus::OK : AirflowStatus::NA;
   // For now, alerts are not implemented beyond this basic check.
   data.alertStatus = AlertStatus::NONE;
+
+  // Mark this data point as valid
+  data.isInitialized = true;
 }
 
 #ifdef ARDUINO

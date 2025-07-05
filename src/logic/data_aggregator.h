@@ -7,7 +7,7 @@
 
 class DataAggregator {
 public:
-    static AggregatedHVACData aggregate(const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer);
+    static AggregatedHVACData aggregate(const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const HVACData& lastKnownData);
 };
 
 #endif // DATA_AGGREGATOR_H

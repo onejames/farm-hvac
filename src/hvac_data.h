@@ -12,6 +12,7 @@
 // A struct to hold all the data for the HVAC system.
 // This is used to pass data between modules without using global variables.
 struct HVACData {
+    bool isInitialized = false;
     float returnTempC = -127.0;
     float supplyTempC = -127.0;
     float deltaT = 0.0;
