@@ -23,6 +23,14 @@ extern const unsigned long SENSOR_READ_INTERVAL_MS;
 constexpr size_t DATA_BUFFER_SIZE = 60;
 constexpr size_t AGGREGATED_DATA_BUFFER_SIZE = 32;
 
+// Alerting Thresholds
+extern const float LOW_DELTA_T_THRESHOLD;
+extern const unsigned int LOW_DELTA_T_DURATION_S;
+extern const unsigned int NO_AIRFLOW_DURATION_S;
+
+// Watchdog Timer
+extern const unsigned int WATCHDOG_TIMEOUT_S;
+
 extern const int I2C_SDA_PIN;
 extern const int I2C_SCL_PIN;
 

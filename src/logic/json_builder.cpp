@@ -3,11 +3,7 @@
 #include "hvac_data.h"
 #include "enum_converters.h"
 
-size_t JsonBuilder::buildPayload(const HVACData& data, const char* version, const char* buildDate, char* buffer, size_t bufferSize) {
-    // Per ArduinoJson v7, StaticJsonDocument is deprecated. JsonDocument is preferred.
-    JsonDocument doc; // Size will be adjusted automatically
-
-    // Set the values. ArduinoJson will format floats correctly.
+void JsonBuilder::serializeHvacDataToJson(JsonObject& doc, const HVACData& data) {
     doc["returnTempC"] = data.returnTempC;
     doc["supplyTempC"] = data.supplyTempC;
     doc["deltaT"] = data.deltaT;
@@ -19,6 +15,12 @@ size_t JsonBuilder::buildPayload(const HVACData& data, const char* version, cons
     doc["geoPumpsStatus"] = toString(data.geoPumpsStatus);
     doc["airflowStatus"] = toString(data.airflowStatus);
     doc["alertStatus"] = toString(data.alertStatus);
+}
+
+size_t JsonBuilder::buildPayload(const HVACData& data, const char* version, const char* buildDate, char* buffer, size_t bufferSize) {
+    // Per ArduinoJson v7, StaticJsonDocument is deprecated. JsonDocument is preferred.
+    JsonDocument doc; // Size will be adjusted automatically
+    serializeHvacDataToJson(doc.to<JsonObject>(), data);
     doc["version"] = version;
     doc["buildDate"] = buildDate;
 
@@ -34,23 +36,12 @@ void JsonBuilder::buildHistoryJson(ArduinoJson::JsonArray& history, const std::a
         const HVACData& data = dataBuffer[idx];
 
         // Don't add empty/default entries if the buffer isn't full yet.
-        // A default return temp is a good indicator of an uninitialized entry.
-        if (data.returnTempC == -127.0f && data.fanAmps == 0.0) {
+        if (!data.isInitialized) {
             continue;
         }
 
         JsonObject entry = history.add<JsonObject>();
-        entry["returnTempC"] = data.returnTempC;
-        entry["supplyTempC"] = data.supplyTempC;
-        entry["deltaT"] = data.deltaT;
-        entry["fanAmps"] = data.fanAmps;
-        entry["compressorAmps"] = data.compressorAmps;
-        entry["geoPumpsAmps"] = data.geoPumpsAmps;
-        entry["fanStatus"] = toString(data.fanStatus);
-        entry["compressorStatus"] = toString(data.compressorStatus);
-        entry["geoPumpsStatus"] = toString(data.geoPumpsStatus);
-        entry["airflowStatus"] = toString(data.airflowStatus);
-        entry["alertStatus"] = toString(data.alertStatus);
+        serializeHvacDataToJson(entry, data);
     }
 }
 

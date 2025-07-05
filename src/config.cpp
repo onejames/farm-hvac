@@ -15,6 +15,14 @@ const float CT_CALIBRATION = 60.606;
 const unsigned int ADC_SAMPLES = 1480;
 const unsigned long SENSOR_READ_INTERVAL_MS = 5000;
 
+// Alerting Thresholds
+const float LOW_DELTA_T_THRESHOLD = 2.0f;      // Degrees C
+const unsigned int LOW_DELTA_T_DURATION_S = 300; // 5 minutes
+const unsigned int NO_AIRFLOW_DURATION_S = 60;   // 1 minute
+
+// Watchdog Timer
+const unsigned int WATCHDOG_TIMEOUT_S = 15; // seconds
+
 // I2C Pins for OLED Display
 const int I2C_SDA_PIN = 21;
 const int I2C_SCL_PIN = 22;

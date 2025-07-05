@@ -4,6 +4,7 @@
 #include <array>
 #include "config.h"
 #include "hvac_data.h"
+#include "logic/alert_manager.h"
 #include "logic/data_aggregator.h"
 #include "data_processing.h"
 #include "network/network_manager.h"

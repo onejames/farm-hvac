@@ -23,6 +23,9 @@ public:
 
     // Overload for aggregated data payload
     static size_t buildPayload(const AggregatedHVACData& data, const char* version, const char* buildDate, char* buffer, size_t bufferSize);
+
+private:
+    static void serializeHvacDataToJson(JsonObject& doc, const HVACData& data);
 };
 
 #endif // JSON_BUILDER_H

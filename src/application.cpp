@@ -2,6 +2,7 @@
 #include "config.h"
 #include "secrets.h"
 #include "version.h"
+#include "esp_task_wdt.h"
 
 Application::Application()
     // Initialize hardware objects
@@ -33,6 +34,11 @@ void Application::setup() {
     // Setup network and web interface
     _networkManager.setup();
     
+    // Initialize the watchdog timer. If the main loop freezes for more than
+    // WATCHDOG_TIMEOUT_S, the ESP32 will automatically reboot.
+    esp_task_wdt_init(WATCHDOG_TIMEOUT_S, true); // true = panic on timeout
+    esp_task_wdt_add(NULL); // Add current task (main loop) to watchdog
+
     // Setup display
     _displayManager.setup();
 
@@ -40,6 +46,9 @@ void Application::setup() {
 }
 
 void Application::loop() {
+    // Feed the watchdog timer on every loop to show that the system is responsive.
+    esp_task_wdt_reset();
+
     // Handle non-blocking network tasks on every loop
     _networkManager.handleClient();
 
@@ -54,6 +63,9 @@ void Application::loop() {
         // Store the latest measurement in our historical data buffer.
         _dataBuffer[_dataBufferIndex] = _hvacData;
         _dataBufferIndex = (_dataBufferIndex + 1) % DATA_BUFFER_SIZE;
+
+        // Check for alert conditions based on the historical data
+        _hvacData.alertStatus = AlertManager::checkAlerts(_dataBuffer);
 
         // Check if it's time to perform an aggregation cycle.
         _aggregationCycleCounter++;

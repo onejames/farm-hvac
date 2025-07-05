@@ -52,8 +52,6 @@ void DataManager::readAndProcessData(HVACData& data, unsigned int adcSamples, fl
   // Basic airflow check and alert status
   // This is a placeholder. A real implementation would check an airflow sensor.
   data.airflowStatus = (data.fanStatus == ComponentStatus::ON) ? AirflowStatus::OK : AirflowStatus::NA;
-  // For now, alerts are not implemented beyond this basic check.
-  data.alertStatus = AlertStatus::NONE;
 
   // Mark this data point as valid
   data.isInitialized = true;
