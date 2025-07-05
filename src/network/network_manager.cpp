@@ -1,5 +1,6 @@
 #include "network_manager.h"
 #include "logic/json_builder.h"
+#include "config/config_manager.h"
 #include "config.h"
 #include <WiFi.h>
 #include <SPIFFS.h>
@@ -13,12 +14,14 @@ const long MQTT_RECONNECT_INTERVAL = 5000;
 
 NetworkManager::NetworkManager(HVACData& latestData,
                                const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const size_t& bufferIndex,
-                               const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& aggregatedBuffer, const size_t& aggregatedBufferIndex)
+                               const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& aggregatedBuffer, const size_t& aggregatedBufferIndex,
+                               ConfigManager& configManager)
     : _hvacData(latestData),
       _dataBuffer(dataBuffer),
       _bufferIndex(bufferIndex),
       _aggregatedDataBuffer(aggregatedBuffer),
       _aggregatedBufferIndex(aggregatedBufferIndex),
+      _configManager(configManager),
       _client(_net),
       _server(80),
       _lastMqttReconnectAttempt(0) {}
@@ -79,6 +82,40 @@ void NetworkManager::setupWebInterface() {
         response->setLength();
         request->send(response);
     });
+
+    // Route to get current settings
+    _server.on("/api/settings", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        AsyncJsonResponse * response = new AsyncJsonResponse();
+        JsonObject root = response->getRoot();
+        const AppConfig& config = _configManager.getConfig();
+        root["lowDeltaTThreshold"] = config.lowDeltaTThreshold;
+        root["lowDeltaTDurationS"] = config.lowDeltaTDurationS;
+        root["noAirflowDurationS"] = config.noAirflowDurationS;
+        response->setLength();
+        request->send(response);
+    });
+
+    // Route to post new settings
+    AsyncCallbackJsonWebHandler* settingsPostHandler = new AsyncCallbackJsonWebHandler("/api/settings", [this](AsyncWebServerRequest *request, JsonVariant &json) {
+        JsonObject jsonObj = json.as<JsonObject>();
+        AppConfig& config = _configManager.getConfig();
+        
+        if (jsonObj.containsKey("lowDeltaTThreshold")) {
+            config.lowDeltaTThreshold = jsonObj["lowDeltaTThreshold"].as<float>();
+        }
+        if (jsonObj.containsKey("lowDeltaTDurationS")) {
+            config.lowDeltaTDurationS = jsonObj["lowDeltaTDurationS"].as<unsigned int>();
+        }
+        if (jsonObj.containsKey("noAirflowDurationS")) {
+            config.noAirflowDurationS = jsonObj["noAirflowDurationS"].as<unsigned int>();
+        }
+        
+        _configManager.save();
+        
+        request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Settings saved.\"}");
+    });
+    settingsPostHandler->setMethod(HTTP_POST);
+    _server.addHandler(settingsPostHandler);
 
     // Serve static web interface files from SPIFFS root
     _server.serveStatic("/", SPIFFS, "/")

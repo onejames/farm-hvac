@@ -15,15 +15,19 @@ Application::Application()
       _pumpsAdapter(_pumpsMonitor),
     // Initialize logic and network managers
       _dataManager(_tempAdapter, _fanAdapter, _compressorAdapter, _pumpsAdapter, returnAirSensorAddress, supplyAirSensorAddress),
-      _networkManager(_hvacData, _dataBuffer, _dataBufferIndex, _aggregatedDataBuffer, _aggregatedDataBufferIndex),
-      _displayManager(), _dataBufferIndex(0), _aggregatedDataBufferIndex(0),
-      _aggregationCycleCounter(0), _lastSensorReadTime(0) {}
+      _networkManager(_hvacData, _dataBuffer, _dataBufferIndex, _aggregatedDataBuffer, _aggregatedDataBufferIndex, _configManager),
+      _displayManager(), _configManager(), _dataBufferIndex(0),
+      _aggregatedDataBufferIndex(0), _aggregationCycleCounter(0),
+      _lastSensorReadTime(0) {}
 
 void Application::setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.println("Booting HVAC Monitor...");
     Serial.printf("Version: %s, Built: %s\n", FIRMWARE_VERSION, BUILD_DATE);
+
+    // Load configuration from SPIFFS
+    _configManager.load();
 
     // Initialize hardware sensors
     _tempSensors.begin();
@@ -65,7 +69,7 @@ void Application::loop() {
         _dataBufferIndex = (_dataBufferIndex + 1) % DATA_BUFFER_SIZE;
 
         // Check for alert conditions based on the historical data
-        _hvacData.alertStatus = AlertManager::checkAlerts(_dataBuffer);
+        _hvacData.alertStatus = AlertManager::checkAlerts(_dataBuffer, _configManager.getConfig());
 
         // Check if it's time to perform an aggregation cycle.
         _aggregationCycleCounter++;

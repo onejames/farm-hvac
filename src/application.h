@@ -4,6 +4,7 @@
 #include <array>
 #include "config.h"
 #include "hvac_data.h"
+#include "config/config_manager.h"
 #include "logic/alert_manager.h"
 #include "logic/data_aggregator.h"
 #include "data_processing.h"
@@ -47,6 +48,7 @@ private:
     size_t _aggregatedDataBufferIndex;
     size_t _aggregationCycleCounter;
     HVACData _hvacData;
+    ConfigManager _configManager;
     DataManager _dataManager;
     NetworkManager _networkManager;
     DisplayManager _displayManager;

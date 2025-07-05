@@ -1,6 +1,7 @@
 #include "alert_manager.h"
+#include "config/config_manager.h" // For AppConfig struct
 
-AlertStatus AlertManager::checkAlerts(const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer) {
+AlertStatus AlertManager::checkAlerts(const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const AppConfig& config) {
     int fanOnNoAirflowCount = 0;
     int lowDeltaTCount = 0;
 
@@ -15,7 +16,7 @@ AlertStatus AlertManager::checkAlerts(const std::array<HVACData, DATA_BUFFER_SIZ
         }
 
         // Check for Compressor ON but low Delta T
-        if (data.compressorStatus == ComponentStatus::ON && data.deltaT < LOW_DELTA_T_THRESHOLD) {
+        if (data.compressorStatus == ComponentStatus::ON && data.deltaT < config.lowDeltaTThreshold) {
             lowDeltaTCount++;
         }
     }
@@ -25,11 +26,11 @@ AlertStatus AlertManager::checkAlerts(const std::array<HVACData, DATA_BUFFER_SIZ
     float lowDeltaTDuration = lowDeltaTCount * (SENSOR_READ_INTERVAL_MS / 1000.0f);
 
     // Check if durations exceed thresholds
-    if (fanOnNoAirflowDuration >= NO_AIRFLOW_DURATION_S) {
+    if (fanOnNoAirflowDuration >= config.noAirflowDurationS) {
         return AlertStatus::FAN_NO_AIRFLOW;
     }
 
-    if (lowDeltaTDuration >= LOW_DELTA_T_DURATION_S) {
+    if (lowDeltaTDuration >= config.lowDeltaTDurationS) {
         return AlertStatus::LOW_DELTA_T;
     }
 

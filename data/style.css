@@ -30,3 +30,42 @@ h1, h2 {
     margin-top: 2em;
     margin-bottom: 2em;
 }
+.form-group {
+    margin-bottom: 1em;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 0.25em;
+}
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+}
+button {
+    padding: 10px 15px;
+    background-color: #0056b3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #004494;
+}
+.message {
+    margin-top: 1em;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+}
+.message.success {
+    background-color: #dff0d8;
+    color: #3c763d;
+    display: block;
+}
+.message.error {
+    background-color: #f2dede;
+    color: #a94442;
+    display: block;
+}
