@@ -3,6 +3,7 @@
 <head>
     <title>HVAC Monitor</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
@@ -17,6 +18,10 @@
         <p>Compressor: <span id="compressorStatus" class="data-point">--</span> (<span id="compressorAmps" class="data-point">--</span> A)</p>
         <p>Geothermal Pumps: <span id="pumpsStatus" class="data-point">--</span> (<span id="pumpsAmps" class="data-point">--</span> A)</p>
         <h2>System</h2>
+        <div class="chart-container">
+            <h2>Historical Averages</h2>
+            <canvas id="historyChart"></canvas>
+        </div>
         <p>Airflow: <span id="airflow" class="data-point">--</span></p>
         <p><b>Alerts: <span id="alerts" class="data-point">--</span></b></p>
         <div class="footer">
