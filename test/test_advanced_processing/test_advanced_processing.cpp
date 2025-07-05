@@ -41,7 +41,7 @@ public:
 void setUp(void) {}
 void tearDown(void) {}
 
-void test_readAllSensors_populates_data_correctly_from_mocks(void) {
+void test_readAndProcessData_populates_raw_data_correctly(void) {
     // 1. Arrange
     HVACData data;
     MockTemperatureSensor mockTemp;
@@ -62,7 +62,7 @@ void test_readAllSensors_populates_data_correctly_from_mocks(void) {
     DataManager dm(mockTemp, mockFan, mockCompressor, mockPumps, returnAddr, supplyAddr);
 
     // 2. Act
-    dm.readAllSensors(data, 1480); // Pass a dummy sample count
+    dm.readAndProcessData(data, 1480, 0.5f); // Pass a dummy sample count and threshold
 
     // 3. Assert
     TEST_ASSERT_EQUAL_FLOAT(25.0, data.returnTempC);
@@ -72,7 +72,7 @@ void test_readAllSensors_populates_data_correctly_from_mocks(void) {
     TEST_ASSERT_EQUAL_FLOAT(0.2, data.geoPumpsAmps);
 }
 
-void test_readAllSensors_handles_temp_sensor_error(void) {
+void test_readAndProcessData_handles_temp_sensor_error(void) {
     // 1. Arrange
     HVACData data;
     MockTemperatureSensor mockTemp;
@@ -87,17 +87,64 @@ void test_readAllSensors_handles_temp_sensor_error(void) {
     DataManager dm(mockTemp, mockFan, mockCompressor, mockPumps, returnAddr, supplyAddr);
 
     // 2. Act
-    dm.readAllSensors(data, 1480);
+    dm.readAndProcessData(data, 1480, 0.5f);
 
     // 3. Assert
     TEST_ASSERT_EQUAL_FLOAT(25.0, data.returnTempC);
     TEST_ASSERT_EQUAL_FLOAT(-127.0, data.supplyTempC);
 }
 
+void test_readAndProcessData_calculates_deltaT_and_statuses_correctly(void) {
+    // 1. Arrange
+    HVACData data;
+    MockTemperatureSensor mockTemp;
+    MockCurrentSensor mockFan, mockCompressor, mockPumps;
+
+    DeviceAddress returnAddr = {0x01};
+    DeviceAddress supplyAddr = {0x02};
+
+    // Configure mocks for a specific scenario
+    mockTemp.setTemp(returnAddr, 25.0f);
+    mockTemp.setTemp(supplyAddr, 18.5f);
+    mockFan.irmsToReturn = 1.2;      // ON
+    mockCompressor.irmsToReturn = 5.5; // ON
+    mockPumps.irmsToReturn = 0.4;    // OFF
+
+    DataManager dm(mockTemp, mockFan, mockCompressor, mockPumps, returnAddr, supplyAddr);
+
+    // 2. Act
+    dm.readAndProcessData(data, 1480, 0.5f);
+
+    // 3. Assert
+    // Assert on processed values
+    TEST_ASSERT_EQUAL_FLOAT(6.5, data.deltaT);
+    TEST_ASSERT_EQUAL_STRING("ON", data.fanStatus.c_str());
+    TEST_ASSERT_EQUAL_STRING("ON", data.compressorStatus.c_str());
+    TEST_ASSERT_EQUAL_STRING("OFF", data.geoPumpsStatus.c_str());
+    TEST_ASSERT_EQUAL_STRING("OK", data.airflowStatus.c_str());
+    TEST_ASSERT_EQUAL_STRING("NONE", data.alertStatus.c_str());
+}
+
+void test_readAndProcessData_handles_deltaT_with_sensor_error(void) {
+    HVACData data;
+    MockTemperatureSensor mockTemp;
+    MockCurrentSensor mockFan, mockCompressor, mockPumps;
+    DeviceAddress returnAddr = {0x01}, supplyAddr = {0x02};
+    mockTemp.setTemp(returnAddr, -127.0f); // Error code
+    mockTemp.setTemp(supplyAddr, 18.5f);
+    DataManager dm(mockTemp, mockFan, mockCompressor, mockPumps, returnAddr, supplyAddr);
+
+    dm.readAndProcessData(data, 1480, 0.5f);
+
+    TEST_ASSERT_EQUAL_FLOAT(0.0, data.deltaT);
+}
+
 // This main function is the entry point for this specific test suite.
 int main(int argc, char **argv) {
     UNITY_BEGIN();
-    RUN_TEST(test_readAllSensors_populates_data_correctly_from_mocks);
-    RUN_TEST(test_readAllSensors_handles_temp_sensor_error);
+    RUN_TEST(test_readAndProcessData_populates_raw_data_correctly);
+    RUN_TEST(test_readAndProcessData_handles_temp_sensor_error);
+    RUN_TEST(test_readAndProcessData_calculates_deltaT_and_statuses_correctly);
+    RUN_TEST(test_readAndProcessData_handles_deltaT_with_sensor_error);
     return UNITY_END();
 }

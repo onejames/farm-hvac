@@ -1,19 +1,30 @@
 #ifndef NETWORK_MANAGER_H
 #define NETWORK_MANAGER_H
 
+#include <ESPAsyncWebServer.h>
+#include <PubSubClient.h>
+#include <WiFiClientSecure.h>
 #include "hvac_data.h"
 #include "interfaces/i_mqtt_client.h"
 
-#ifdef ARDUINO
-void setupWiFi();
-void setupWebInterface();
-void handleMqttClient();
-void publishMessage();
-#endif
+class NetworkManager {
+public:
+    explicit NetworkManager(HVACData& data);
+    void setup();
+    void handleClient();
+    void publish();
 
-/**
- * @brief Publishes an MQTT message. This function is platform-agnostic and testable.
- */
-bool publishMqttMessage(IMqttClient& client, const char* topic, const HVACData& data, const char* version, const char* buildDate);
+private:
+    void setupWiFi();
+    void setupWebInterface();
+    bool publishMqttMessage(IMqttClient& client, const char* topic, const char* version, const char* buildDate);
+
+    HVACData& _hvacData;
+    WiFiClientSecure _net;
+    PubSubClient _client;
+    AsyncWebServer _server;
+    unsigned long _lastMqttReconnectAttempt;
+    unsigned long _lastPublishTime;
+};
 
 #endif // NETWORK_MANAGER_H

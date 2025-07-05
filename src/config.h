@@ -7,13 +7,18 @@
   this file to get access to the configuration values.
 */
 
+#include "hvac_data.h" // For DeviceAddress
+
 extern const int ONE_WIRE_BUS_PIN;
 extern const int FAN_CT_PIN;
 extern const int COMPRESSOR_CT_PIN;
 extern const int PUMPS_CT_PIN;
 extern const float AMPS_ON_THRESHOLD;
 extern const float CT_CALIBRATION;
+extern const unsigned int ADC_SAMPLES;
 extern const unsigned long SENSOR_READ_INTERVAL_MS;
-extern const int ADC_SAMPLES_COUNT;
+
+extern const DeviceAddress returnAirSensorAddress;
+extern const DeviceAddress supplyAirSensorAddress;
 
 #endif // CONFIG_H

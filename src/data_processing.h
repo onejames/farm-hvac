@@ -11,7 +11,7 @@ public:
                 ICurrentSensor& compressor, ICurrentSensor& pumps,
                 const DeviceAddress& returnAddr, const DeviceAddress& supplyAddr);
 
-    void readAllSensors(HVACData& data, unsigned int adcSamples);
+    void readAndProcessData(HVACData& data, unsigned int adcSamples, float ampsThreshold);
     void printStatus(const HVACData& data);
 
 private:

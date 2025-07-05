@@ -10,16 +10,34 @@ DataManager::DataManager(ITemperatureSensor& tempSensors, ICurrentSensor& fan,
       _returnAddr(returnAddr),
       _supplyAddr(supplyAddr) {}
 
-void DataManager::readAllSensors(HVACData& data, unsigned int adcSamples) {
-  // Read Temperatures
+void DataManager::readAndProcessData(HVACData& data, unsigned int adcSamples, float ampsThreshold) {
+  // 1. Read raw sensor data
   _tempSensors.requestTemperatures();
   data.returnTempC = _tempSensors.getTempC(_returnAddr);
   data.supplyTempC = _tempSensors.getTempC(_supplyAddr);
 
-  // Read Currents
   data.fanAmps = _fanMonitor.calcIrms(adcSamples);
   data.compressorAmps = _compressorMonitor.calcIrms(adcSamples);
   data.geoPumpsAmps = _pumpsMonitor.calcIrms(adcSamples);
+
+  // 2. Process the raw data
+  // Calculate Delta T, handling sensor errors
+  if (data.returnTempC != -127.0f && data.supplyTempC != -127.0f) {
+      data.deltaT = data.returnTempC - data.supplyTempC;
+  } else {
+      data.deltaT = 0.0f;
+  }
+
+  // Determine component status based on amperage
+  data.fanStatus = (data.fanAmps > ampsThreshold) ? "ON" : "OFF";
+  data.compressorStatus = (data.compressorAmps > ampsThreshold) ? "ON" : "OFF";
+  data.geoPumpsStatus = (data.geoPumpsAmps > ampsThreshold) ? "ON" : "OFF";
+
+  // Basic airflow check and alert status
+  // This is a placeholder. A real implementation would check an airflow sensor.
+  data.airflowStatus = (data.fanStatus == "ON") ? "OK" : "N/A";
+  // For now, alerts are not implemented beyond this basic check.
+  data.alertStatus = "NONE";
 }
 
 #ifdef ARDUINO

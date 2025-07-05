@@ -1,0 +1,20 @@
+[
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/data_processing.o -c -DPLATFORMIO=60118 -Iinclude -I.pio/libdeps/native/ArduinoJson/src -Isrc src/data_processing.cpp",
+        "directory": "/Users/jameslaster/Code/James/farm-hvac",
+        "file": "src/data_processing.cpp",
+        "output": ".pio/build/native/src/data_processing.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/logic/json_builder.o -c -DPLATFORMIO=60118 -Iinclude -I.pio/libdeps/native/ArduinoJson/src -Isrc src/logic/json_builder.cpp",
+        "directory": "/Users/jameslaster/Code/James/farm-hvac",
+        "file": "src/logic/json_builder.cpp",
+        "output": ".pio/build/native/src/logic/json_builder.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/network/network_manager.o -c -DPLATFORMIO=60118 -Iinclude -I.pio/libdeps/native/ArduinoJson/src -Isrc src/network/network_manager.cpp",
+        "directory": "/Users/jameslaster/Code/James/farm-hvac",
+        "file": "src/network/network_manager.cpp",
+        "output": ".pio/build/native/src/network/network_manager.o"
+    }
+]
