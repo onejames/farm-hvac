@@ -70,38 +70,11 @@ void Application::loop() {
 }
 
 void Application::performAggregation() {
-    double sumReturnTemp = 0.0;
-    double sumSupplyTemp = 0.0;
-    double sumDeltaT = 0.0;
-    double sumFanAmps = 0.0;
-    double sumCompressorAmps = 0.0;
-    double sumGeoPumpsAmps = 0.0;
-    size_t validSamples = 0;
+    // Use the dedicated aggregator to calculate the averages
+    AggregatedHVACData aggregatedData = DataAggregator::aggregate(_dataBuffer);
 
-    for (const auto& data : _dataBuffer) {
-        // Skip uninitialized entries in the buffer
-        if (data.returnTempC == -127.0f && data.fanAmps == 0.0) {
-            continue;
-        }
-        validSamples++;
-        sumReturnTemp += data.returnTempC;
-        sumSupplyTemp += data.supplyTempC;
-        sumDeltaT += data.deltaT;
-        sumFanAmps += data.fanAmps;
-        sumCompressorAmps += data.compressorAmps;
-        sumGeoPumpsAmps += data.geoPumpsAmps;
-    }
-
-    if (validSamples == 0) return; // Nothing to aggregate
-
-    AggregatedHVACData aggregatedData;
+    // The Application is still responsible for the final state and timestamp
     aggregatedData.timestamp = millis();
-    aggregatedData.avgReturnTempC = sumReturnTemp / validSamples;
-    aggregatedData.avgSupplyTempC = sumSupplyTemp / validSamples;
-    aggregatedData.avgDeltaT = sumDeltaT / validSamples;
-    aggregatedData.avgFanAmps = sumFanAmps / validSamples;
-    aggregatedData.avgCompressorAmps = sumCompressorAmps / validSamples;
-    aggregatedData.avgGeoPumpsAmps = sumGeoPumpsAmps / validSamples;
     aggregatedData.lastFanStatus = _hvacData.fanStatus;
     aggregatedData.lastCompressorStatus = _hvacData.compressorStatus;
     aggregatedData.lastGeoPumpsStatus = _hvacData.geoPumpsStatus;

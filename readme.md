@@ -1,6 +1,6 @@
 # HVAC Monitoring System for ESP32
 
-**Version:** v0.4.2 (Built: 2025-07-05 17:24:36)
+**Version:** v0.4.2-1-g0598080-dirty (Built: 2025-07-05 17:39:42)
 
 ## Introduction
 
