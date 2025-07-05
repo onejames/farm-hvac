@@ -69,3 +69,14 @@ button:hover {
     color: #a94442;
     display: block;
 }
+.separator {
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 2em 0;
+}
+button.danger {
+    background-color: #d9534f;
+}
+button.danger:hover {
+    background-color: #c9302c;
+}

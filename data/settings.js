@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('settingsForm');
     const messageDiv = document.getElementById('message');
+    const rebootButton = document.getElementById('rebootButton');
 
     // Fetch current settings and populate the form
     fetch('/api/settings')
@@ -50,5 +51,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // The error is already displayed, but we log it for debugging.
             console.error('Error saving settings:', error);
         });
+    });
+
+    // Handle reboot button click
+    rebootButton.addEventListener('click', () => {
+        if (confirm('Are you sure you want to reboot the device?')) {
+            messageDiv.textContent = 'Rebooting device... Please wait a moment before reconnecting.';
+            messageDiv.className = 'message success';
+
+            fetch('/api/reboot', { method: 'POST' })
+                .catch(error => {
+                    // This catch might not even fire if the server reboots before responding,
+                    // but it's good practice to have it.
+                    console.error('Error sending reboot command:', error);
+                    messageDiv.textContent = 'Failed to send reboot command.';
+                    messageDiv.className = 'message error';
+                });
+        }
     });
 });

@@ -116,6 +116,15 @@ void NetworkManager::setupWebInterface() {
     settingsPostHandler->setMethod(HTTP_POST);
     _server.addHandler(settingsPostHandler);
 
+    // Route to trigger a device reboot
+    _server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Rebooting...\"}");
+        
+        // Add a small delay to ensure the HTTP response is sent before rebooting
+        delay(500);
+        ESP.restart();
+    });
+
     // Serve static web interface files from SPIFFS root
     _server.serveStatic("/", SPIFFS, "/")
         .setDefaultFile("index.html")
