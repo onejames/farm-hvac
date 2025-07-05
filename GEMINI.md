@@ -27,38 +27,34 @@ The primary goals are:
 
 ## 3. Software Architecture & Code Structure
 
-The project follows a modular design to separate concerns. All source code is in the `src/` directory.
+The project follows a modular, object-oriented design to separate concerns. All source code is in the `src/` directory.
 
 *   **`main.cpp`**:
-    *   The main application entry point (`setup()` and `loop()`).
-    *   **Defines** all global configuration constants (pins, thresholds).
-    *   **Instantiates** all global hardware and network client objects (e.g., `DallasTemperature`, `PubSubClient`, `AsyncWebServer`).
+    *   The main application entry point (`setup()` and `loop()`). It creates and runs the main `Application` object.
 
 *   **`hvac_data.h`**:
-    *   Defines the `HVACData` struct. This is a critical design choice to act as a central data container, passed by reference between modules to avoid excessive global variables.
+    *   Defines the `HVACData` struct, a central data container passed between modules.
 
 *   **`data_processing.cpp` / `.h`**:
-    *   Contains all logic for reading from physical sensors.
-    *   Performs data analysis (e.g., calculating Delta T, determining component ON/OFF status).
-    *   Uses `extern` to access the global sensor objects (e.g., `tempSensors`, `fanMonitor`) that are instantiated in `main.cpp`.
+    *   The `DataManager` class encapsulates all logic for reading sensors and processing raw data into meaningful state.
 
 *   **`network_manager.cpp` / `.h`**:
-    *   Manages all network functionality: Wi-Fi connection, the local web server, and AWS IoT MQTT communication.
-    *   Builds the HTML for the local dashboard and the JSON payload for MQTT.
-    *   Uses `extern` to access the global network client objects (`client`, `server`) instantiated in `main.cpp`.
+    *   The `NetworkManager` class manages all network tasks: Wi-Fi, the local web server, and AWS IoT MQTT communication.
 
 *   **`config.h`**:
     *   A centralized header file that **declares** all global configuration constants using `extern`. This allows any module to `#include` it and be aware of the configuration variables.
+
+*   **`config.cpp`**:
+    *   **Defines** the actual values for the constants declared in `config.h`.
 
 *   **`secrets.h`**:
     *   Stores all sensitive information: Wi-Fi credentials and AWS IoT certificates. This file is listed in `.gitignore` and should not be committed to version control.
 
 ## 4. Configuration Management
 
-The project uses a "declare in header, define in source" pattern for configuration.
-
-1.  **Declaration (`src/config.h`)**: Constants are declared as `extern const ...` without a value.
-2.  **Definition (`src/main.cpp`)**: The same constants are defined with their actual values. This ensures there is only one instance of each constant in the final compiled program.
+The project uses a "declare in header, define in source" pattern for global configuration.
+1.  **Declaration (`src/config.h`)**: Constants are declared as `extern const ...`.
+2.  **Definition (`src/config.cpp`)**: The same constants are defined with their actual values.
 
 ## 5. Core Logic Flow
 

@@ -14,10 +14,9 @@ Application::Application()
       _pumpsAdapter(_pumpsMonitor),
     // Initialize logic and network managers
       _dataManager(_tempAdapter, _fanAdapter, _compressorAdapter, _pumpsAdapter, returnAirSensorAddress, supplyAirSensorAddress),
-      _networkManager(_hvacData),
-      _displayManager() {
-          _lastSensorReadTime = 0;
-      }
+      _networkManager(_hvacData, _dataBuffer, _dataBufferIndex, _aggregatedDataBuffer, _aggregatedDataBufferIndex),
+      _displayManager(), _dataBufferIndex(0), _aggregatedDataBufferIndex(0),
+      _aggregationCycleCounter(0), _lastSensorReadTime(0) {}
 
 void Application::setup() {
     Serial.begin(115200);
@@ -49,11 +48,67 @@ void Application::loop() {
     if (currentTime - _lastSensorReadTime >= SENSOR_READ_INTERVAL_MS) {
         _lastSensorReadTime = currentTime;
 
+        // Read sensor data and process it into the _hvacData member.
         _dataManager.readAndProcessData(_hvacData, ADC_SAMPLES, AMPS_ON_THRESHOLD);
-        _networkManager.publish();
+
+        // Store the latest measurement in our historical data buffer.
+        _dataBuffer[_dataBufferIndex] = _hvacData;
+        _dataBufferIndex = (_dataBufferIndex + 1) % DATA_BUFFER_SIZE;
+
+        // Check if it's time to perform an aggregation cycle.
+        _aggregationCycleCounter++;
+        if (_aggregationCycleCounter >= DATA_BUFFER_SIZE) {
+            performAggregation();
+            _aggregationCycleCounter = 0;
+        }
+
         _dataManager.printStatus(_hvacData);
     }
 
     // The display can update on its own, more frequent schedule
     _displayManager.update(_hvacData);
+}
+
+void Application::performAggregation() {
+    double sumReturnTemp = 0.0;
+    double sumSupplyTemp = 0.0;
+    double sumDeltaT = 0.0;
+    double sumFanAmps = 0.0;
+    double sumCompressorAmps = 0.0;
+    double sumGeoPumpsAmps = 0.0;
+    size_t validSamples = 0;
+
+    for (const auto& data : _dataBuffer) {
+        // Skip uninitialized entries in the buffer
+        if (data.returnTempC == -127.0f && data.fanAmps == 0.0) {
+            continue;
+        }
+        validSamples++;
+        sumReturnTemp += data.returnTempC;
+        sumSupplyTemp += data.supplyTempC;
+        sumDeltaT += data.deltaT;
+        sumFanAmps += data.fanAmps;
+        sumCompressorAmps += data.compressorAmps;
+        sumGeoPumpsAmps += data.geoPumpsAmps;
+    }
+
+    if (validSamples == 0) return; // Nothing to aggregate
+
+    AggregatedHVACData aggregatedData;
+    aggregatedData.timestamp = millis();
+    aggregatedData.avgReturnTempC = sumReturnTemp / validSamples;
+    aggregatedData.avgSupplyTempC = sumSupplyTemp / validSamples;
+    aggregatedData.avgDeltaT = sumDeltaT / validSamples;
+    aggregatedData.avgFanAmps = sumFanAmps / validSamples;
+    aggregatedData.avgCompressorAmps = sumCompressorAmps / validSamples;
+    aggregatedData.avgGeoPumpsAmps = sumGeoPumpsAmps / validSamples;
+    aggregatedData.lastFanStatus = _hvacData.fanStatus;
+    aggregatedData.lastCompressorStatus = _hvacData.compressorStatus;
+    aggregatedData.lastGeoPumpsStatus = _hvacData.geoPumpsStatus;
+
+    _aggregatedDataBuffer[_aggregatedDataBufferIndex] = aggregatedData;
+    _aggregatedDataBufferIndex = (_aggregatedDataBufferIndex + 1) % AGGREGATED_DATA_BUFFER_SIZE;
+    Serial.printf("[App] Performed data aggregation cycle. Avg dT: %.2f\n", aggregatedData.avgDeltaT);
+
+    _networkManager.publishAggregatedData();
 }

@@ -1,6 +1,8 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include <array>
+#include "config.h"
 #include "hvac_data.h"
 #include "data_processing.h"
 #include "network/network_manager.h"
@@ -37,11 +39,18 @@ private:
     EmonLibAdapter _fanAdapter, _compressorAdapter, _pumpsAdapter;
 
     // Core Logic and State
+    std::array<HVACData, DATA_BUFFER_SIZE> _dataBuffer; // Primary buffer for raw data
+    size_t _dataBufferIndex;                            // Index for the primary buffer
+    std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE> _aggregatedDataBuffer;
+    size_t _aggregatedDataBufferIndex;
+    size_t _aggregationCycleCounter;
     HVACData _hvacData;
     DataManager _dataManager;
     NetworkManager _networkManager;
     DisplayManager _displayManager;
     unsigned long _lastSensorReadTime;
+
+    void performAggregation();
 };
 
 #endif // APPLICATION_H

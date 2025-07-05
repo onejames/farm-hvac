@@ -1,6 +1,7 @@
 #include <unity.h>
 #include "data_processing.h"
 #include "hvac_data.h"
+#include <cmath> // For NAN
 
 #include <map>
 #include <vector>
@@ -139,6 +140,29 @@ void test_readAndProcessData_handles_deltaT_with_sensor_error(void) {
     TEST_ASSERT_EQUAL_FLOAT(0.0, data.deltaT);
 }
 
+void test_readAndProcessData_handles_nan_current_reading(void) {
+    // 1. Arrange
+    HVACData data;
+    MockTemperatureSensor mockTemp;
+    MockCurrentSensor mockFan, mockCompressor, mockPumps;
+    DeviceAddress returnAddr = {0x01}, supplyAddr = {0x02};
+
+    // Configure mocks to return NaN for the fan sensor, simulating a sensor error
+    mockFan.irmsToReturn = NAN;
+    mockCompressor.irmsToReturn = 5.5; // ON
+    mockPumps.irmsToReturn = 0.4;    // OFF
+
+    DataManager dm(mockTemp, mockFan, mockCompressor, mockPumps, returnAddr, supplyAddr);
+
+    // 2. Act
+    dm.readAndProcessData(data, 1480, 0.5f);
+
+    // 3. Assert
+    TEST_ASSERT_EQUAL(ComponentStatus::UNKNOWN, data.fanStatus);
+    TEST_ASSERT_EQUAL(ComponentStatus::ON, data.compressorStatus);
+    TEST_ASSERT_EQUAL(ComponentStatus::OFF, data.geoPumpsStatus);
+}
+
 // This main function is the entry point for this specific test suite.
 int main(int argc, char **argv) {
     UNITY_BEGIN();
@@ -146,5 +170,6 @@ int main(int argc, char **argv) {
     RUN_TEST(test_readAndProcessData_handles_temp_sensor_error);
     RUN_TEST(test_readAndProcessData_calculates_deltaT_and_statuses_correctly);
     RUN_TEST(test_readAndProcessData_handles_deltaT_with_sensor_error);
+    RUN_TEST(test_readAndProcessData_handles_nan_current_reading);
     return UNITY_END();
 }

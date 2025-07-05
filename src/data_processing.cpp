@@ -1,5 +1,6 @@
 #include "data_processing.h"
 #include "logic/enum_converters.h" // For toString helpers
+#include <cmath> // For isnan
 
 DataManager::DataManager(ITemperatureSensor& tempSensors, ICurrentSensor& fan,
                          ICurrentSensor& compressor, ICurrentSensor& pumps,
@@ -30,9 +31,23 @@ void DataManager::readAndProcessData(HVACData& data, unsigned int adcSamples, fl
   }
 
   // Determine component status based on amperage
-  data.fanStatus = (data.fanAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
-  data.compressorStatus = (data.compressorAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
-  data.geoPumpsStatus = (data.geoPumpsAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
+  if (std::isnan(data.fanAmps)) {
+      data.fanStatus = ComponentStatus::UNKNOWN;
+  } else {
+      data.fanStatus = (data.fanAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
+  }
+
+  if (std::isnan(data.compressorAmps)) {
+      data.compressorStatus = ComponentStatus::UNKNOWN;
+  } else {
+      data.compressorStatus = (data.compressorAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
+  }
+
+  if (std::isnan(data.geoPumpsAmps)) {
+      data.geoPumpsStatus = ComponentStatus::UNKNOWN;
+  } else {
+      data.geoPumpsStatus = (data.geoPumpsAmps > ampsThreshold) ? ComponentStatus::ON : ComponentStatus::OFF;
+  }
 
   // Basic airflow check and alert status
   // This is a placeholder. A real implementation would check an airflow sensor.

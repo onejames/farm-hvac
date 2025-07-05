@@ -1,25 +1,34 @@
 #ifndef NETWORK_MANAGER_H
 #define NETWORK_MANAGER_H
 
+#include <array>
+#include "config.h"
 #include <ESPAsyncWebServer.h>
 #include <PubSubClient.h>
 #include <WiFiClientSecure.h>
 #include "hvac_data.h"
 #include "interfaces/i_mqtt_client.h"
 
+struct AggregatedHVACData; // Forward declaration
+
 class NetworkManager {
 public:
-    explicit NetworkManager(HVACData& data);
+    explicit NetworkManager(HVACData& latestData,
+                            const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const size_t& bufferIndex,
+                            const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& aggregatedBuffer, const size_t& aggregatedBufferIndex);
     void setup();
     void handleClient();
-    void publish();
+    void publishAggregatedData();
 
 private:
     void setupWiFi();
     void setupWebInterface();
-    bool publishMqttMessage(IMqttClient& client, const char* topic, const char* version, const char* buildDate);
 
     HVACData& _hvacData;
+    const std::array<HVACData, DATA_BUFFER_SIZE>& _dataBuffer;
+    const size_t& _bufferIndex;
+    const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& _aggregatedDataBuffer;
+    const size_t& _aggregatedBufferIndex;
     WiFiClientSecure _net;
     PubSubClient _client;
     AsyncWebServer _server;

@@ -6,11 +6,19 @@
 #include "secrets.h"
 #include "version.h"
 #include "adapters/pubsub_client_adapter.h"
+#include <ArduinoJson.h>
+#include <AsyncJson.h>
 
 const long MQTT_RECONNECT_INTERVAL = 5000;
 
-NetworkManager::NetworkManager(HVACData& data)
-    : _hvacData(data),
+NetworkManager::NetworkManager(HVACData& latestData,
+                               const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const size_t& bufferIndex,
+                               const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& aggregatedBuffer, const size_t& aggregatedBufferIndex)
+    : _hvacData(latestData),
+      _dataBuffer(dataBuffer),
+      _bufferIndex(bufferIndex),
+      _aggregatedDataBuffer(aggregatedBuffer),
+      _aggregatedBufferIndex(aggregatedBufferIndex),
       _client(_net),
       _server(80),
       _lastMqttReconnectAttempt(0) {}
@@ -53,6 +61,25 @@ void NetworkManager::setupWebInterface() {
         request->send(200, "application/json", buffer);
     });
 
+    // Route for the historical data buffer
+    _server.on("/api/history", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        // Use a dynamic response to handle the larger payload of the history buffer
+        AsyncJsonResponse * response = new AsyncJsonResponse();
+        JsonArray root = response->getRoot().to<JsonArray>();
+        JsonBuilder::buildHistoryJson(root, _dataBuffer, _bufferIndex);
+        response->setLength();
+        request->send(response);
+    });
+
+    // Route for the aggregated historical data buffer
+    _server.on("/api/aggregated_history", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        AsyncJsonResponse * response = new AsyncJsonResponse();
+        JsonArray root = response->getRoot().to<JsonArray>();
+        JsonBuilder::buildAggregatedHistoryJson(root, _aggregatedDataBuffer, _aggregatedBufferIndex);
+        response->setLength();
+        request->send(response);
+    });
+
     // Serve static web interface files from SPIFFS root
     _server.serveStatic("/", SPIFFS, "/")
         .setDefaultFile("index.html")
@@ -85,29 +112,33 @@ void NetworkManager::handleClient() {
     }
 }
 
-void NetworkManager::publish() {
-    // The timing is now handled by the Application class.
-    // This method is called at the correct interval.
-    PubSubClientAdapter mqttAdapter(_client);
-    publishMqttMessage(mqttAdapter, AWS_IOT_TOPIC, FIRMWARE_VERSION, BUILD_DATE);
-}
+void NetworkManager::publishAggregatedData() {
+    if (!_client.connected()) {
+        return;
+    }
 
-bool NetworkManager::publishMqttMessage(IMqttClient& client, const char* topic, const char* version, const char* buildDate) {
-    if (!client.connected()) {
-        return false;
+    // Get the most recently added aggregated data point.
+    // The current index points to the *next* slot to be filled, so we go back one.
+    size_t latestIndex = (_aggregatedBufferIndex + AGGREGATED_DATA_BUFFER_SIZE - 1) % AGGREGATED_DATA_BUFFER_SIZE;
+    const AggregatedHVACData& dataToPublish = _aggregatedDataBuffer[latestIndex];
+
+    // Don't publish if the entry is uninitialized
+    if (dataToPublish.timestamp == 0) {
+        return;
     }
 
     char payload[512];
-    size_t payload_size = JsonBuilder::buildPayload(_hvacData, version, buildDate, payload, sizeof(payload));
+    size_t payload_size = JsonBuilder::buildPayload(dataToPublish, FIRMWARE_VERSION, BUILD_DATE, payload, sizeof(payload));
 
     if (payload_size == 0) {
-        Serial.println("[MQTT] JSON serialization failed.");
-        return false;
+        Serial.println("[MQTT] Aggregated JSON serialization failed.");
+        return;
     }
 
-    if (!client.publish(topic, reinterpret_cast<const uint8_t*>(payload), payload_size)) {
-        Serial.println("[MQTT] Publish failed. Message may be too large for MQTT buffer.");
-        return false;
+    PubSubClientAdapter mqttAdapter(_client);
+    if (!mqttAdapter.publish(AWS_IOT_TOPIC, reinterpret_cast<const uint8_t*>(payload), payload_size)) {
+        Serial.println("[MQTT] Aggregated data publish failed. Message may be too large for MQTT buffer.");
+    } else {
+        Serial.println("[MQTT] Published aggregated data.");
     }
-    return true;
 }
