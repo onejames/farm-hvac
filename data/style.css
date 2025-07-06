@@ -80,3 +80,16 @@ button.danger {
 button.danger:hover {
     background-color: #c9302c;
 }
+.log-box {
+    background-color: #2b2b2b;
+    color: #f1f1f1;
+    padding: 1em;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 500px;
+    overflow-y: auto;
+}
+.log-controls {
+    margin-bottom: 1em;
+}

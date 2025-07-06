@@ -1,7 +1,7 @@
 #include <unity.h>
+#include "config.h"
 #include "logic/data_aggregator.h"
 #include "hvac_data.h"
-#include "config.h"
 #include <array>
 
 void setUp(void) {}

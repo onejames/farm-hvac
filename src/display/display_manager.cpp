@@ -24,13 +24,12 @@ DisplayManager::~DisplayManager() {
     delete _display;
 }
 
-void DisplayManager::setup() {
+bool DisplayManager::setup() {
     // The I2C bus must be initialized before the display.
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
     if (!_display->begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-        Serial.println(F("SSD1306 allocation failed"));
-        return;
+        return false;
     }
     _isSetup = true;
 
@@ -43,6 +42,7 @@ void DisplayManager::setup() {
     _display->println(F(FIRMWARE_VERSION));
     _display->display();
     delay(2000);
+    return true;
 }
 
 void DisplayManager::update(const HVACData& data) {

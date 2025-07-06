@@ -12,7 +12,7 @@ public:
     DisplayManager();
     ~DisplayManager();
 
-    void setup();
+    bool setup();
     void update(const HVACData& data);
 
 private:

@@ -13,8 +13,7 @@ void tearDown(void) {}
 
 void test_load_creates_default_file_if_not_exists() {
     ConfigManager cm;
-    mock_SPIFFS_set_exists(false);
-
+    // The mock filesystem is empty by default after mock_SPIFFS_reset()
     cm.load(); // Should detect file doesn't exist and call save()
 
     // Verify that the config has default values
@@ -22,14 +21,22 @@ void test_load_creates_default_file_if_not_exists() {
 
     // Verify that save() was called and wrote the default config to the mock file
     JsonDocument doc;
-    deserializeJson(doc, mock_SPIFFS_get_content());
+    deserializeJson(doc, mock_SPIFFS_get_file_content("/config.json"));
     TEST_ASSERT_EQUAL_FLOAT(LOW_DELTA_T_THRESHOLD, doc["lowDeltaTThreshold"]);
 }
 
 void test_load_parses_existing_file() {
     ConfigManager cm;
-    mock_SPIFFS_set_exists(true);
-    mock_SPIFFS_set_content("{\"lowDeltaTThreshold\":5.5,\"lowDeltaTDurationS\":500,\"noAirflowDurationS\":100,\"tempSensorDisconnectedDurationS\":40}");
+
+    // Programmatically create the test JSON to make the test more robust and maintainable.
+    JsonDocument doc;
+    doc["lowDeltaTThreshold"] = 5.5f;
+    doc["lowDeltaTDurationS"] = 500;
+    doc["noAirflowDurationS"] = 100;
+    doc["tempSensorDisconnectedDurationS"] = 40;
+    std::string json_string;
+    serializeJson(doc, json_string);
+    mock_SPIFFS_set_file_content("/config.json", json_string);
 
     cm.load();
 
@@ -47,7 +54,7 @@ void test_save_writes_correct_json() {
     cm.save();
 
     JsonDocument doc;
-    deserializeJson(doc, mock_SPIFFS_get_content());
+    deserializeJson(doc, mock_SPIFFS_get_file_content("/config.json"));
     TEST_ASSERT_EQUAL_FLOAT(9.9f, doc["lowDeltaTThreshold"]);
     TEST_ASSERT_EQUAL_UINT(999, doc["lowDeltaTDurationS"]);
 }
@@ -55,8 +62,7 @@ void test_save_writes_correct_json() {
 void test_remove_deletes_file() {
     ConfigManager cm;
     // Simulate that the file exists initially
-    mock_SPIFFS_set_exists(true);
-    mock_SPIFFS_set_content("{\"some\":\"data\"}");
+    mock_SPIFFS_set_file_content("/config.json", "{\"some\":\"data\"}");
 
     cm.remove();
 

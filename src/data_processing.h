@@ -12,7 +12,6 @@ public:
                 const DeviceAddress& returnAddr, const DeviceAddress& supplyAddr);
 
     void readAndProcessData(HVACData& data, unsigned int adcSamples, float ampsThreshold);
-    void printStatus(const HVACData& data);
 
 private:
     ITemperatureSensor& _tempSensors;

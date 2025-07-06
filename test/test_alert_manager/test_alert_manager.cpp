@@ -1,31 +1,40 @@
 #include <unity.h>
+#include "config.h"
 #include "logic/alert_manager.h"
 #include "hvac_data.h"
-#include "config.h"
 #include "config/config_manager.h"
 #include <array>
 
 void setUp(void) {}
 void tearDown(void) {}
 
-void test_checkAlerts_no_alert_on_normal_conditions() {
-    std::array<HVACData, DATA_BUFFER_SIZE> buffer;
+// Helper to create a default config for tests
+AppConfig create_test_config() {
     AppConfig config;
     config.lowDeltaTThreshold = 2.0f;
     config.lowDeltaTDurationS = 300;
     config.noAirflowDurationS = 60;
     config.tempSensorDisconnectedDurationS = 30;
+    return config;
+}
 
-    buffer.fill(HVACData());
-    for (int i = 0; i < DATA_BUFFER_SIZE; ++i) {
-        buffer[i].isInitialized = true;
-        buffer[i].fanStatus = ComponentStatus::ON;
-        buffer[i].airflowStatus = AirflowStatus::OK;
-        buffer[i].compressorStatus = ComponentStatus::ON;
-        buffer[i].deltaT = 5.0f;
-        buffer[i].returnTempC = 25.0f;
-        buffer[i].supplyTempC = 20.0f;
+// Helper to fill the buffer with a baseline of normal, initialized data
+void fill_buffer_with_normal_data(std::array<HVACData, DATA_BUFFER_SIZE>& buffer) {
+    for (auto& data : buffer) {
+        data.isInitialized = true;
+        data.fanStatus = ComponentStatus::ON;
+        data.airflowStatus = AirflowStatus::OK;
+        data.compressorStatus = ComponentStatus::ON;
+        data.deltaT = 5.0f;
+        data.returnTempC = 25.0f;
+        data.supplyTempC = 20.0f;
     }
+}
+
+void test_checkAlerts_no_alert_on_normal_conditions() {
+    AppConfig config = create_test_config();
+    std::array<HVACData, DATA_BUFFER_SIZE> buffer;
+    fill_buffer_with_normal_data(buffer);
 
     AlertStatus result = AlertManager::checkAlerts(buffer, config);
 
@@ -33,22 +42,15 @@ void test_checkAlerts_no_alert_on_normal_conditions() {
 }
 
 void test_checkAlerts_triggers_fan_no_airflow_alert() {
-    AppConfig config;
-    config.lowDeltaTThreshold = 2.0f;
-    config.lowDeltaTDurationS = 300;
+    AppConfig config = create_test_config();
     config.noAirflowDurationS = (DATA_BUFFER_SIZE * SENSOR_READ_INTERVAL_MS / 1000) - 1; // Ensure duration is met
-    config.tempSensorDisconnectedDurationS = 30;
 
     std::array<HVACData, DATA_BUFFER_SIZE> buffer;
-    buffer.fill(HVACData());
-    // Simulate fan on with no airflow for the entire buffer duration
-    // (assuming buffer duration > NO_AIRFLOW_DURATION_S)
-    for (int i = 0; i < DATA_BUFFER_SIZE; ++i) {
-        buffer[i].isInitialized = true;
-        buffer[i].fanStatus = ComponentStatus::ON;
-        buffer[i].airflowStatus = AirflowStatus::NA; // No airflow
-        buffer[i].returnTempC = 25.0f;
-        buffer[i].supplyTempC = 20.0f;
+    fill_buffer_with_normal_data(buffer);
+
+    // Introduce the fault condition
+    for (auto& data : buffer) {
+        data.airflowStatus = AirflowStatus::NA;
     }
 
     AlertStatus result = AlertManager::checkAlerts(buffer, config);
@@ -57,22 +59,16 @@ void test_checkAlerts_triggers_fan_no_airflow_alert() {
 }
 
 void test_checkAlerts_triggers_low_delta_t_alert() {
-    AppConfig config;
-    config.lowDeltaTThreshold = 2.0f;
+    AppConfig config = create_test_config();
     config.lowDeltaTDurationS = (DATA_BUFFER_SIZE * SENSOR_READ_INTERVAL_MS / 1000) - 1; // Ensure duration is met
-    config.noAirflowDurationS = 60;
-    config.tempSensorDisconnectedDurationS = 30;
 
     std::array<HVACData, DATA_BUFFER_SIZE> buffer;
-    buffer.fill(HVACData());
-    // Simulate compressor on with low delta T for the entire buffer duration
-    // (assuming buffer duration > LOW_DELTA_T_DURATION_S)
-    for (int i = 0; i < DATA_BUFFER_SIZE; ++i) {
-        buffer[i].isInitialized = true;
-        buffer[i].compressorStatus = ComponentStatus::ON;
-        buffer[i].deltaT = config.lowDeltaTThreshold - 0.5f; // Below threshold
-        buffer[i].returnTempC = 20.0f;
-        buffer[i].supplyTempC = 20.0f - buffer[i].deltaT;
+    fill_buffer_with_normal_data(buffer);
+
+    // Introduce the fault condition
+    for (auto& data : buffer) {
+        data.compressorStatus = ComponentStatus::ON;
+        data.deltaT = config.lowDeltaTThreshold - 0.5f; // Below threshold
     }
 
     AlertStatus result = AlertManager::checkAlerts(buffer, config);
@@ -81,14 +77,10 @@ void test_checkAlerts_triggers_low_delta_t_alert() {
 }
 
 void test_checkAlerts_does_not_trigger_if_duration_is_too_short() {
-    AppConfig config;
-    config.lowDeltaTThreshold = 2.0f;
-    config.lowDeltaTDurationS = 300;
-    config.noAirflowDurationS = 60;
-    config.tempSensorDisconnectedDurationS = 30;
-
+    AppConfig config = create_test_config();
     std::array<HVACData, DATA_BUFFER_SIZE> buffer;
-    buffer.fill(HVACData());
+    fill_buffer_with_normal_data(buffer);
+
     // Simulate a problem for only one sample
     buffer[0].isInitialized = true;
     buffer[0].fanStatus = ComponentStatus::ON;
@@ -100,17 +92,15 @@ void test_checkAlerts_does_not_trigger_if_duration_is_too_short() {
 }
 
 void test_checkAlerts_triggers_temp_sensor_disconnected_alert() {
-    AppConfig config;
-    config.lowDeltaTThreshold = 2.0f;
-    config.lowDeltaTDurationS = 300;
-    config.noAirflowDurationS = 60;
+    AppConfig config = create_test_config();
     config.tempSensorDisconnectedDurationS = (DATA_BUFFER_SIZE * SENSOR_READ_INTERVAL_MS / 1000) - 1; // Ensure duration is met
 
     std::array<HVACData, DATA_BUFFER_SIZE> buffer;
-    buffer.fill(HVACData());
-    for (int i = 0; i < DATA_BUFFER_SIZE; ++i) {
-        buffer[i].isInitialized = true;
-        buffer[i].returnTempC = -127.0f; // Disconnected
+    fill_buffer_with_normal_data(buffer);
+
+    // Introduce the fault condition
+    for (auto& data : buffer) {
+        data.returnTempC = -127.0f; // Disconnected
     }
 
     AlertStatus result = AlertManager::checkAlerts(buffer, config);

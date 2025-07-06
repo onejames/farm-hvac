@@ -2,6 +2,7 @@
 #include "logic/json_builder.h"
 #include "config/config_manager.h"
 #include "config.h"
+#include "logging/log_manager.h"
 #include "logic/settings_validator.h"
 #include <WiFi.h>
 #include <Esp.h>
@@ -17,13 +18,15 @@ const long MQTT_RECONNECT_INTERVAL = 5000;
 NetworkManager::NetworkManager(HVACData& latestData,
                                const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const size_t& bufferIndex,
                                const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& aggregatedBuffer, const size_t& aggregatedBufferIndex,
-                               ConfigManager& configManager)
+                               ConfigManager& configManager,
+                               LogManager& logManager)
     : _hvacData(latestData),
       _dataBuffer(dataBuffer),
       _bufferIndex(bufferIndex),
       _aggregatedDataBuffer(aggregatedBuffer),
       _aggregatedBufferIndex(aggregatedBufferIndex),
       _configManager(configManager),
+      _logManager(logManager),
       _client(_net),
       _server(80),
       _lastMqttReconnectAttempt(0) {}
@@ -36,14 +39,10 @@ void NetworkManager::setup() {
 void NetworkManager::setupWiFi() {
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    Serial.print("Connecting to WiFi..");
+    _logManager.log("Connecting to WiFi...");
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
-        Serial.print(".");
     }
-    Serial.println("\nConnected!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
 }
 
 void NetworkManager::setupWebInterface() {
@@ -55,7 +54,7 @@ void NetworkManager::setupWebInterface() {
 
     // Setup the web server routes
     if(!SPIFFS.begin(true)){
-        Serial.println("An Error has occurred while mounting SPIFFS");
+        _logManager.log("ERROR: An Error has occurred while mounting SPIFFS");
         return;
     }
 
@@ -136,6 +135,17 @@ void NetworkManager::setupWebInterface() {
         ESP.restart();
     });
 
+    // Route to get system logs
+    _server.on("/api/logs", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", _logManager.getLogs());
+    });
+
+    // Route to clear system logs
+    _server.on("/api/logs/clear", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        _logManager.clearLogs();
+        request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Logs cleared.\"}");
+    });
+
     // Route to get device status (uptime, memory)
     _server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
         AsyncJsonResponse * response = new AsyncJsonResponse();
@@ -156,7 +166,7 @@ void NetworkManager::setupWebInterface() {
     });
 
     _server.begin();
-    Serial.println("HTTP server started");
+    _logManager.log("HTTP server started");
 }
 
 void NetworkManager::handleClient() {
@@ -164,13 +174,11 @@ void NetworkManager::handleClient() {
         long now = millis();
         if (now - _lastMqttReconnectAttempt > MQTT_RECONNECT_INTERVAL) {
             _lastMqttReconnectAttempt = now;
-            Serial.print("[MQTT] Attempting to connect to AWS IoT...");
+            _logManager.log("[MQTT] Attempting to connect to AWS IoT...");
             if (_client.connect(THINGNAME)) {
-                Serial.println(" Connected!");
+                _logManager.log("[MQTT] Connected!");
             } else {
-                Serial.print(" failed, rc=");
-                Serial.print(_client.state());
-                Serial.println(". Retrying in 5 seconds...");
+                _logManager.log("[MQTT] Connection failed, rc=%d. Retrying in 5 seconds...", _client.state());
             }
         }
     } else {
@@ -197,14 +205,14 @@ void NetworkManager::publishAggregatedData() {
     size_t payload_size = JsonBuilder::buildPayload(dataToPublish, FIRMWARE_VERSION, BUILD_DATE, payload, sizeof(payload));
 
     if (payload_size == 0) {
-        Serial.println("[MQTT] Aggregated JSON serialization failed.");
+        _logManager.log("[MQTT] ERROR: Aggregated JSON serialization failed.");
         return;
     }
 
     PubSubClientAdapter mqttAdapter(_client);
     if (!mqttAdapter.publish(AWS_IOT_TOPIC, reinterpret_cast<const uint8_t*>(payload), payload_size)) {
-        Serial.println("[MQTT] Aggregated data publish failed. Message may be too large for MQTT buffer.");
+        _logManager.log("[MQTT] ERROR: Aggregated data publish failed. Message may be too large for MQTT buffer.");
     } else {
-        Serial.println("[MQTT] Published aggregated data.");
+        _logManager.log("[MQTT] Published aggregated data.");
     }
 }

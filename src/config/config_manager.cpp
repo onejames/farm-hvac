@@ -17,32 +17,40 @@ void ConfigManager::load() {
     _config.noAirflowDurationS = NO_AIRFLOW_DURATION_S;
     _config.tempSensorDisconnectedDurationS = TEMP_SENSOR_DISCONNECTED_DURATION_S;
 
-    if (SPIFFS.begin(true) && SPIFFS.exists(CONFIG_FILE)) {
-        auto configFile = SPIFFS.open(CONFIG_FILE, "r");
-        if (configFile) {
-            JsonDocument doc;
-            DeserializationError error = deserializeJson(doc, configFile);
-            if (!error) {
-                _config.lowDeltaTThreshold = doc["lowDeltaTThreshold"] | LOW_DELTA_T_THRESHOLD;
-                _config.lowDeltaTDurationS = doc["lowDeltaTDurationS"] | LOW_DELTA_T_DURATION_S;
-                _config.noAirflowDurationS = doc["noAirflowDurationS"] | NO_AIRFLOW_DURATION_S;
-                _config.tempSensorDisconnectedDurationS = doc["tempSensorDisconnectedDurationS"] | TEMP_SENSOR_DISCONNECTED_DURATION_S;
-#ifdef ARDUINO
-                Serial.println("Loaded configuration from SPIFFS.");
-#endif
-            } else {
-#ifdef ARDUINO
-                Serial.println("Failed to parse config file, using defaults.");
-#endif
-            }
-            configFile.close();
-        }
-    } else {
+    if (!SPIFFS.exists(CONFIG_FILE)) {
 #ifdef ARDUINO
         Serial.println("Config file not found, creating with default values.");
 #endif
         save();
+        return;
     }
+
+    auto configFile = SPIFFS.open(CONFIG_FILE, "r");
+    if (!configFile) {
+        // This case is unlikely if exists() passed, but good to handle.
+        // We'll just use the defaults already set.
+        return;
+    }
+
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, configFile);
+    configFile.close(); // Close file as soon as we're done with it.
+
+    if (error) {
+#ifdef ARDUINO
+        Serial.println("Failed to parse config file, using defaults.");
+#endif
+        return;
+    }
+
+    // If we get here, parsing was successful.
+    _config.lowDeltaTThreshold = doc["lowDeltaTThreshold"] | LOW_DELTA_T_THRESHOLD;
+    _config.lowDeltaTDurationS = doc["lowDeltaTDurationS"] | LOW_DELTA_T_DURATION_S;
+    _config.noAirflowDurationS = doc["noAirflowDurationS"] | NO_AIRFLOW_DURATION_S;
+    _config.tempSensorDisconnectedDurationS = doc["tempSensorDisconnectedDurationS"] | TEMP_SENSOR_DISCONNECTED_DURATION_S;
+#ifdef ARDUINO
+    Serial.println("Loaded configuration from SPIFFS.");
+#endif
 }
 
 void ConfigManager::save() {

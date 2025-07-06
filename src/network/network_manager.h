@@ -10,6 +10,7 @@
 #include "interfaces/i_mqtt_client.h"
 
 class ConfigManager; // Forward declaration
+class LogManager; // Forward declaration
 struct AggregatedHVACData; // Forward declaration
 
 class NetworkManager {
@@ -17,7 +18,8 @@ public:
     explicit NetworkManager(HVACData& latestData,
                             const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const size_t& bufferIndex,
                             const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& aggregatedBuffer, const size_t& aggregatedBufferIndex,
-                            ConfigManager& configManager);
+                            ConfigManager& configManager,
+                            LogManager& logManager);
     void setup();
     void handleClient();
     void publishAggregatedData();
@@ -32,6 +34,7 @@ private:
     const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& _aggregatedDataBuffer;
     const size_t& _aggregatedBufferIndex;
     ConfigManager& _configManager;
+    LogManager& _logManager;
     WiFiClientSecure _net;
     PubSubClient _client;
     AsyncWebServer _server;

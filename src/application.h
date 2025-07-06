@@ -4,6 +4,7 @@
 #include <array>
 #include "config.h"
 #include "hvac_data.h"
+#include "logging/log_manager.h"
 #include "config/config_manager.h"
 #include "logic/alert_manager.h"
 #include "logic/data_aggregator.h"
@@ -48,13 +49,16 @@ private:
     size_t _aggregatedDataBufferIndex;
     size_t _aggregationCycleCounter;
     HVACData _hvacData;
+    // Managers - order matters for initialization
     ConfigManager _configManager;
+    LogManager _logManager;
     DataManager _dataManager;
     NetworkManager _networkManager;
     DisplayManager _displayManager;
     unsigned long _lastSensorReadTime;
 
     void performAggregation();
+    void logStatus();
 };
 
 #endif // APPLICATION_H

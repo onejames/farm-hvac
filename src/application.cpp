@@ -15,16 +15,19 @@ Application::Application()
       _pumpsAdapter(_pumpsMonitor),
     // Initialize logic and network managers
       _dataManager(_tempAdapter, _fanAdapter, _compressorAdapter, _pumpsAdapter, returnAirSensorAddress, supplyAirSensorAddress),
-      _networkManager(_hvacData, _dataBuffer, _dataBufferIndex, _aggregatedDataBuffer, _aggregatedDataBufferIndex, _configManager),
-      _displayManager(), _configManager(), _dataBufferIndex(0),
-      _aggregatedDataBufferIndex(0), _aggregationCycleCounter(0),
+      _configManager(),
+      _logManager(),
+      _networkManager(_hvacData, _dataBuffer, _dataBufferIndex, _aggregatedDataBuffer, _aggregatedDataBufferIndex, _configManager, _logManager),
+      _displayManager(), _dataBufferIndex(0), _aggregatedDataBufferIndex(0), _aggregationCycleCounter(0),
       _lastSensorReadTime(0) {}
 
 void Application::setup() {
     Serial.begin(115200);
     while (!Serial);
-    Serial.println("Booting HVAC Monitor...");
-    Serial.printf("Version: %s, Built: %s\n", FIRMWARE_VERSION, BUILD_DATE);
+
+    // Initialize logging system. Note: SPIFFS is initialized in NetworkManager.
+    _logManager.begin();
+    _logManager.log("System boot. Version: %s", FIRMWARE_VERSION);
 
     // Load configuration from SPIFFS
     _configManager.load();
@@ -37,6 +40,7 @@ void Application::setup() {
 
     // Setup network and web interface
     _networkManager.setup();
+    _logManager.log("Network setup complete. IP: %s", WiFi.localIP().toString().c_str());
     
     // Initialize the watchdog timer. If the main loop freezes for more than
     // WATCHDOG_TIMEOUT_S, the ESP32 will automatically reboot.
@@ -44,9 +48,11 @@ void Application::setup() {
     esp_task_wdt_add(NULL); // Add current task (main loop) to watchdog
 
     // Setup display
-    _displayManager.setup();
+    if (!_displayManager.setup()) {
+        _logManager.log("ERROR: SSD1306 allocation failed");
+    }
 
-    Serial.println("Setup complete. Entering main loop.");
+    _logManager.log("Setup complete. Entering main loop.");
 }
 
 void Application::loop() {

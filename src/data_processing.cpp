@@ -56,11 +56,3 @@ void DataManager::readAndProcessData(HVACData& data, unsigned int adcSamples, fl
   // Mark this data point as valid
   data.isInitialized = true;
 }
-
-#ifdef ARDUINO
-#include <Arduino.h> // For Serial.printf
-void DataManager::printStatus(const HVACData& data) {
-  Serial.printf("Temps: Ret=%.1fC, Sup=%.1fC, dT=%.1fC | Amps: Fan=%.2f, Comp=%.2f, Pump=%.2f | Alert: %s\n",
-    data.returnTempC, data.supplyTempC, data.deltaT, data.fanAmps, data.compressorAmps, data.geoPumpsAmps, toString(data.alertStatus));
-}
-#endif // ARDUINO
