@@ -1,0 +1,8 @@
+{
+    "name": "MockSPIFFS",
+    "version": "1.0.0",
+    "description": "A mock implementation of the SPIFFS library for native unit testing.",
+    "build": {
+        "libLDFMode": "deep"
+    }
+}

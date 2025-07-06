@@ -23,6 +23,8 @@ void test_checkAlerts_no_alert_on_normal_conditions() {
         buffer[i].airflowStatus = AirflowStatus::OK;
         buffer[i].compressorStatus = ComponentStatus::ON;
         buffer[i].deltaT = 5.0f;
+        buffer[i].returnTempC = 25.0f;
+        buffer[i].supplyTempC = 20.0f;
     }
 
     AlertStatus result = AlertManager::checkAlerts(buffer, config);
@@ -45,6 +47,8 @@ void test_checkAlerts_triggers_fan_no_airflow_alert() {
         buffer[i].isInitialized = true;
         buffer[i].fanStatus = ComponentStatus::ON;
         buffer[i].airflowStatus = AirflowStatus::NA; // No airflow
+        buffer[i].returnTempC = 25.0f;
+        buffer[i].supplyTempC = 20.0f;
     }
 
     AlertStatus result = AlertManager::checkAlerts(buffer, config);
@@ -67,6 +71,8 @@ void test_checkAlerts_triggers_low_delta_t_alert() {
         buffer[i].isInitialized = true;
         buffer[i].compressorStatus = ComponentStatus::ON;
         buffer[i].deltaT = config.lowDeltaTThreshold - 0.5f; // Below threshold
+        buffer[i].returnTempC = 20.0f;
+        buffer[i].supplyTempC = 20.0f - buffer[i].deltaT;
     }
 
     AlertStatus result = AlertManager::checkAlerts(buffer, config);

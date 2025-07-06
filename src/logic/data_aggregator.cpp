@@ -31,11 +31,12 @@ AggregatedHVACData DataAggregator::aggregate(const std::array<HVACData, DATA_BUF
         result.avgFanAmps = sumFanAmps / validSamples;
         result.avgCompressorAmps = sumCompressorAmps / validSamples;
         result.avgGeoPumpsAmps = sumGeoPumpsAmps / validSamples;
-        
-        // Capture the final state from the most recent reading
-        result.lastFanStatus = lastKnownData.fanStatus;
-        result.lastCompressorStatus = lastKnownData.compressorStatus;
-        result.lastGeoPumpsStatus = lastKnownData.geoPumpsStatus;
     }
+
+    // Capture the final state from the most recent reading, regardless of buffer content
+    result.lastFanStatus = lastKnownData.fanStatus;
+    result.lastCompressorStatus = lastKnownData.compressorStatus;
+    result.lastGeoPumpsStatus = lastKnownData.geoPumpsStatus;
+
     return result;
 }
