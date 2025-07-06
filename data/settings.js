@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('settingsForm');
     const messageDiv = document.getElementById('message');
     const rebootButton = document.getElementById('rebootButton');
+    const resetButton = document.getElementById('resetButton');
 
     // Fetch current settings and populate the form
     fetch('/api/settings')
@@ -65,6 +66,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     // but it's good practice to have it.
                     console.error('Error sending reboot command:', error);
                     messageDiv.textContent = 'Failed to send reboot command.';
+                    messageDiv.className = 'message error';
+                });
+        }
+    });
+
+    // Handle factory reset button click
+    resetButton.addEventListener('click', () => {
+        if (confirm('Are you sure you want to perform a factory reset? This will erase all saved settings and reboot the device.')) {
+            messageDiv.textContent = 'Performing factory reset... The device will reboot.';
+            messageDiv.className = 'message success';
+
+            fetch('/api/factory_reset', { method: 'POST' })
+                .catch(error => {
+                    // This catch might not even fire if the server reboots before responding,
+                    // but it's good practice to have it.
+                    console.error('Error sending factory reset command:', error);
+                    messageDiv.textContent = 'Failed to send factory reset command.';
                     messageDiv.className = 'message error';
                 });
         }

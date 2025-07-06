@@ -45,6 +45,13 @@ void MockFile::close() {}
 
 bool MockSPIFFS::begin(bool formatOnFail) { return true; }
 bool MockSPIFFS::exists(const char* path) { return mock_file_exists; }
+bool MockSPIFFS::remove(const char* path) {
+    if (strcmp(path, "/config.json") == 0) {
+        mock_file_exists = false;
+        mock_file_content.clear();
+    }
+    return true;
+}
 MockFile MockSPIFFS::open(const char* path, const char* mode) {
     if (strcmp(mode, "w") == 0) {
         mock_file_content.clear();

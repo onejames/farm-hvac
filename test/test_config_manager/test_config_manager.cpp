@@ -52,10 +52,23 @@ void test_save_writes_correct_json() {
     TEST_ASSERT_EQUAL_UINT(999, doc["lowDeltaTDurationS"]);
 }
 
+void test_remove_deletes_file() {
+    ConfigManager cm;
+    // Simulate that the file exists initially
+    mock_SPIFFS_set_exists(true);
+    mock_SPIFFS_set_content("{\"some\":\"data\"}");
+
+    cm.remove();
+
+    // After remove is called, the mock should report that the file no longer exists.
+    TEST_ASSERT_FALSE(SPIFFS.exists("/config.json"));
+}
+
 int main(int argc, char **argv) {
     UNITY_BEGIN();
     RUN_TEST(test_load_creates_default_file_if_not_exists);
     RUN_TEST(test_load_parses_existing_file);
     RUN_TEST(test_save_writes_correct_json);
+    RUN_TEST(test_remove_deletes_file);
     return UNITY_END();
 }

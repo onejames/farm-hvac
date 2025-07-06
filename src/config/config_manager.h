@@ -13,6 +13,7 @@ class ConfigManager {
 public:
     void load();
     void save();
+    void remove();
     AppConfig& getConfig();
 
 private:

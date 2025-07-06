@@ -125,6 +125,16 @@ void NetworkManager::setupWebInterface() {
         ESP.restart();
     });
 
+    // Route to trigger a factory reset
+    _server.on("/api/factory_reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Factory reset successful. Rebooting...\"}");
+        
+        _configManager.remove();
+        // Add a small delay to ensure the HTTP response is sent before rebooting
+        delay(500);
+        ESP.restart();
+    });
+
     // Serve static web interface files from SPIFFS root
     _server.serveStatic("/", SPIFFS, "/")
         .setDefaultFile("index.html")

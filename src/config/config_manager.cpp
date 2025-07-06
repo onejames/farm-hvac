@@ -72,6 +72,15 @@ void ConfigManager::save() {
     configFile.close();
 }
 
+void ConfigManager::remove() {
+    if (SPIFFS.exists(CONFIG_FILE)) {
+        SPIFFS.remove(CONFIG_FILE);
+#ifdef ARDUINO
+        Serial.println("Configuration file removed.");
+#endif
+    }
+}
+
 AppConfig& ConfigManager::getConfig() {
     return _config;
 }

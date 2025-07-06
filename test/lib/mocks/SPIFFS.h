@@ -25,6 +25,7 @@ class MockSPIFFS {
 public:
     bool begin(bool formatOnFail = false);
     bool exists(const char* path);
+    bool remove(const char* path);
     MockFile open(const char* path, const char* mode);
 };
 
