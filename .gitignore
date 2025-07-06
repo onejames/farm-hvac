@@ -12,6 +12,9 @@ aws_keys/*
 # This file contains sensitive credentials and should never be committed.
 src/secrets.h
 
+# Local web development mock data
+data/mock/
+
 # macOS specific files
 .DS_Store
 

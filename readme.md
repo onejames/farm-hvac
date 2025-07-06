@@ -1,6 +1,6 @@
 # HVAC Monitoring System for ESP32
 
-**Version:** v0.4.4-1-g977f108-dirty (Built: 2025-07-05 15:02:50)
+**Version:** v0.8.0-dirty (Built: 2025-07-06 19:33:11)
 
 ## Introduction
 
@@ -19,8 +19,13 @@ A robust monitoring system for a geothermal HVAC unit, built for the ESP32. It r
 *   **Temperature Sensing**: Monitors return and supply air temperatures using DS18B20 sensors.
 *   **Current Monitoring**: Uses Current Transformers (CTs) to measure the amperage of the fan, compressor, and geothermal water pumps.
 *   **State Analysis**: Determines if components are ON/OFF and calculates the temperature differential (Delta T).
-*   **Local Web Interface**: Provides a simple, auto-refreshing web page to view live data from any device on the local network.
-*   **Cloud Integration**: Securely publishes all sensor data and system status to AWS IoT Core via MQTT for long-term storage, dashboarding, and alerting.
+*   **On-Device Display**: Shows real-time status on a 128x64 OLED screen.
+*   **Data Buffering**: Stores the last 60 raw measurements and the last 32 aggregated measurements in on-device circular buffers.
+*   **Local Web Interface**: Provides a web page to view live data and a chart of historical trends from any device on the local network.
+*   **Cloud Integration**: Securely publishes aggregated data to AWS IoT Core via MQTT for long-term storage and analysis.
+*   **On-Device Alerting**: Analyzes historical data to detect and display alerts for common fault conditions.
+*   **Device Status API**: Exposes an API endpoint to check device uptime and free memory.
+*   **High Reliability**: Includes a watchdog timer to automatically recover from software freezes.
 *   **Modular Codebase**: The code is separated into logical modules for easy maintenance and extension.
 
 ## Project Structure
@@ -29,9 +34,11 @@ The project is organized into several key modules within the `src/` directory:
 
 *   `application.cpp/.h`: Encapsulates the entire application logic, owning all managers and state.
 *   `main.cpp`: The main entry point. It creates and runs the `Application` object.
-*   `hvac_data.h`: Defines the `HVACData` struct, a central data container that holds all sensor readings and system state.
+*   `hvac_data.h`: Defines the `HVACData` and `AggregatedHVACData` structs.
 *   `data_processing.cpp/.h`: The `DataManager` class, which handles reading sensors and processing raw data.
+*   `logic/`: Contains stateless utility classes for `AlertManager`, `DataAggregator`, and `JsonBuilder`.
 *   `network_manager.cpp/.h`: The `NetworkManager` class, which manages Wi-Fi, the web server, and MQTT.
+*   `display/`: The `DisplayManager` class for the OLED screen.
 *   `config.h`: A centralized header file that declares all hardware and application configuration constants.
 *   `config.cpp`: Defines the values for the constants declared in `config.h`.
 *   `secrets.h`: A dedicated file for storing sensitive information like Wi-Fi credentials and AWS IoT certificates. **This file is not meant to be committed to version control.**
@@ -82,3 +89,23 @@ This project is built using PlatformIO and relies on the following libraries, wh
 3.  Open the repository folder in VS Code.
 4.  Complete the steps in the "Setup and Configuration" section above.
 5.  Connect your ESP32 board, select the correct COM port, and click the "Upload" button in the PlatformIO toolbar.
+
+## Local Web Development
+
+To develop the web interface (HTML, CSS, JavaScript) without needing to re-flash the ESP32 for every change, you can use a local development server.
+
+### Prerequisites
+
+*   [Node.js and npm](https://nodejs.org/) installed.
+
+### Steps
+
+1.  **Install `live-server`**: This is a simple development server with live-reloading capabilities.
+    ```bash
+    npm install -g live-server
+    ```
+2.  **Run the Server**: Navigate to the project's root directory in your terminal and run the following command to serve the `data` directory:
+    ```bash
+    live-server data
+    ```
+3.  Your default web browser will open to `http://127.0.0.1:8080`, showing the web interface populated with mock data from the `data/mock/` directory. You can now edit the files in the `data/` directory, and the browser will automatically refresh to show your changes.

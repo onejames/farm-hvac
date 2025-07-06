@@ -4,8 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const rebootButton = document.getElementById('rebootButton');
     const resetButton = document.getElementById('resetButton');
 
+    // Detect if we are running in a local development environment
+    const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+    const apiBasePath = isLocal ? '/mock' : '/api';
+
     // Fetch current settings and populate the form
-    fetch('/api/settings')
+    fetch(`${apiBasePath}/settings.json`)
         .then(response => response.json())
         .then(data => {
             document.getElementById('lowDeltaTThreshold').value = data.lowDeltaTThreshold;
@@ -27,7 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
             tempSensorDisconnectedDurationS: parseInt(formData.get('tempSensorDisconnectedDurationS'), 10)
         };
 
-        fetch('/api/settings', {
+        // In local dev, we just simulate success. On the device, we send the real request.
+        if (isLocal) {
+            console.log('Simulating save with:', settings);
+            messageDiv.textContent = 'Settings saved! (Mock)';
+            messageDiv.className = 'message success';
+            setTimeout(() => { messageDiv.className = 'message'; }, 3000);
+            return;
+        }
+
+        fetch(`${apiBasePath}/settings`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -60,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
             messageDiv.textContent = 'Rebooting device... Please wait a moment before reconnecting.';
             messageDiv.className = 'message success';
 
-            fetch('/api/reboot', { method: 'POST' })
+            fetch(`${apiBasePath}/reboot`, { method: 'POST' })
                 .catch(error => {
                     // This catch might not even fire if the server reboots before responding,
                     // but it's good practice to have it.
@@ -77,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             messageDiv.textContent = 'Performing factory reset... The device will reboot.';
             messageDiv.className = 'message success';
 
-            fetch('/api/factory_reset', { method: 'POST' })
+            fetch(`${apiBasePath}/factory_reset`, { method: 'POST' })
                 .catch(error => {
                     // This catch might not even fire if the server reboots before responding,
                     // but it's good practice to have it.

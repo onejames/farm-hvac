@@ -1,7 +1,11 @@
 let historyChart; // Keep a global reference to the chart instance
 
+// Detect if we are running in a local development environment
+const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+const apiBasePath = isLocal ? '/mock' : '/api';
+
 function fetchRealtimeData() {
-    fetch('/api/data')
+    fetch(`${apiBasePath}/data.json`)
         .then(response => response.json())
         .then(data => {
             document.getElementById('returnTemp').innerText = data.returnTempC.toFixed(1);
@@ -23,7 +27,7 @@ function fetchRealtimeData() {
 }
 
 function fetchChartData() {
-    fetch('/api/aggregated_history')
+    fetch(`${apiBasePath}/aggregated_history.json`)
         .then(response => response.json())
         .then(data => {
             if (data.length === 0) return;
@@ -84,7 +88,39 @@ function fetchChartData() {
         .finally(() => setTimeout(fetchChartData, 60000)); // Update chart every minute
 }
 
+function formatUptime(ms) {
+    if (ms < 1000) return `${ms} ms`;
+
+    let seconds = Math.floor(ms / 1000);
+    let minutes = Math.floor(seconds / 60);
+    let hours = Math.floor(minutes / 60);
+    let days = Math.floor(hours / 24);
+
+    hours %= 24;
+    minutes %= 60;
+    seconds %= 60;
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0) parts.push(`${seconds}s`);
+
+    return parts.join(' ') || '0s';
+}
+
+function fetchStatusData() {
+    fetch(`${apiBasePath}/status.json`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('uptime').innerText = formatUptime(data.uptime_ms);
+        })
+        .catch(error => console.error('Error fetching status data:', error))
+        .finally(() => setTimeout(fetchStatusData, 15000)); // Update every 15 seconds
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     fetchRealtimeData();
     fetchChartData();
+    fetchStatusData();
 });

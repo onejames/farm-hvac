@@ -4,6 +4,7 @@
 #include "config.h"
 #include "logic/settings_validator.h"
 #include <WiFi.h>
+#include <Esp.h>
 #include <SPIFFS.h>
 #include "secrets.h"
 #include "version.h"
@@ -133,6 +134,16 @@ void NetworkManager::setupWebInterface() {
         // Add a small delay to ensure the HTTP response is sent before rebooting
         delay(500);
         ESP.restart();
+    });
+
+    // Route to get device status (uptime, memory)
+    _server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+        AsyncJsonResponse * response = new AsyncJsonResponse();
+        JsonObject root = response->getRoot();
+        root["uptime_ms"] = millis();
+        root["free_heap_bytes"] = ESP.getFreeHeap();
+        response->setLength();
+        request->send(response);
     });
 
     // Serve static web interface files from SPIFFS root
