@@ -1,10 +1,10 @@
 #ifndef LOG_MANAGER_H
 #define LOG_MANAGER_H
 
+#include <string>
 #ifdef ARDUINO
 #include <Arduino.h>
 #else
-#include <string>
 using String = std::string;
 #endif
 
@@ -13,14 +13,18 @@ extern const char* LOG_FILE;
 extern const char* OLD_LOG_FILE;
 extern const size_t MAX_LOG_SIZE;
 
+class IFileSystem; // Forward declaration
+
 class LogManager {
 public:
-    void begin();
+    explicit LogManager(IFileSystem& fs);
+    void begin(); // Kept for potential future use, though currently empty.
     void log(const char* format, ...);
-    String getLogs();
+    [[nodiscard]] String getLogs();
     void clearLogs();
 
 private:
+    IFileSystem& _fs;
     void rotateLogs();
 };
 

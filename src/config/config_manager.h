@@ -9,14 +9,18 @@ struct AppConfig {
     unsigned int tempSensorDisconnectedDurationS;
 };
 
+class IFileSystem; // Forward declaration
+
 class ConfigManager {
 public:
+    explicit ConfigManager(IFileSystem& fs);
     void load();
     void save();
     void remove();
-    AppConfig& getConfig();
+    [[nodiscard]] AppConfig& getConfig();
 
 private:
+    IFileSystem& _fs;
     AppConfig _config;
 };
 

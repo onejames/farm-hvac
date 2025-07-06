@@ -1,5 +1,6 @@
 #include "application.h"
 #include "config.h"
+#include <SPIFFS.h>
 #include "secrets.h"
 #include "version.h"
 #include "esp_task_wdt.h"
@@ -13,39 +14,30 @@ Application::Application()
       _fanAdapter(_fanMonitor),
       _compressorAdapter(_compressorMonitor),
       _pumpsAdapter(_pumpsMonitor),
-    // Initialize logic and network managers
+      _appDataContext{_hvacData, _dataBuffer, _dataBufferIndex, _aggregatedDataBuffer, _aggregatedDataBufferIndex},
+    // Initialize managers in the order they are declared in the header for clarity and correctness.
+      _spiffs(),
+      _configManager(_spiffs),
+      _logManager(_spiffs),
       _dataManager(_tempAdapter, _fanAdapter, _compressorAdapter, _pumpsAdapter, returnAirSensorAddress, supplyAirSensorAddress),
-      _configManager(),
-      _logManager(),
-      _networkManager(_hvacData, _dataBuffer, _dataBufferIndex, _aggregatedDataBuffer, _aggregatedDataBufferIndex, _configManager, _logManager),
+      _networkManager(_appDataContext, _configManager, _logManager),
       _displayManager(), _dataBufferIndex(0), _aggregatedDataBufferIndex(0), _aggregationCycleCounter(0),
       _lastSensorReadTime(0) {}
 
 void Application::setup() {
-    Serial.begin(115200);
-    while (!Serial);
-
-    // Initialize logging system. Note: SPIFFS is initialized in NetworkManager.
-    _logManager.begin();
-    _logManager.log("System boot. Version: %s", FIRMWARE_VERSION);
+    setupSerial();
+    setupFileSystem();
 
     // Load configuration from SPIFFS
     _configManager.load();
 
-    // Initialize hardware sensors
-    _tempSensors.begin();
-    _fanMonitor.current(FAN_CT_PIN, CT_CALIBRATION);
-    _compressorMonitor.current(COMPRESSOR_CT_PIN, CT_CALIBRATION);
-    _pumpsMonitor.current(PUMPS_CT_PIN, CT_CALIBRATION);
+    setupHardware();
 
     // Setup network and web interface
     _networkManager.setup();
     _logManager.log("Network setup complete. IP: %s", WiFi.localIP().toString().c_str());
     
-    // Initialize the watchdog timer. If the main loop freezes for more than
-    // WATCHDOG_TIMEOUT_S, the ESP32 will automatically reboot.
-    esp_task_wdt_init(WATCHDOG_TIMEOUT_S, true); // true = panic on timeout
-    esp_task_wdt_add(NULL); // Add current task (main loop) to watchdog
+    setupWatchdog();
 
     // Setup display
     if (!_displayManager.setup()) {
@@ -66,29 +58,47 @@ void Application::loop() {
     unsigned long currentTime = millis();
     if (currentTime - _lastSensorReadTime >= SENSOR_READ_INTERVAL_MS) {
         _lastSensorReadTime = currentTime;
-
-        // Read sensor data and process it into the _hvacData member.
-        _dataManager.readAndProcessData(_hvacData, ADC_SAMPLES, AMPS_ON_THRESHOLD);
-
-        // Store the latest measurement in our historical data buffer.
-        _dataBuffer[_dataBufferIndex] = _hvacData;
-        _dataBufferIndex = (_dataBufferIndex + 1) % DATA_BUFFER_SIZE;
-
-        // Check for alert conditions based on the historical data
-        _hvacData.alertStatus = AlertManager::checkAlerts(_dataBuffer, _configManager.getConfig());
-
-        // Check if it's time to perform an aggregation cycle.
-        _aggregationCycleCounter++;
-        if (_aggregationCycleCounter >= DATA_BUFFER_SIZE) {
-            performAggregation();
-            _aggregationCycleCounter = 0;
-        }
-
-        _dataManager.printStatus(_hvacData);
+        performSensorReadCycle();
     }
 
     // The display can update on its own, more frequent schedule
     _displayManager.update(_hvacData);
+}
+
+void Application::performSensorReadCycle() {
+    // Read sensor data and process it into the _hvacData member.
+    _dataManager.readAndProcessData(_hvacData, ADC_SAMPLES, AMPS_ON_THRESHOLD);
+
+    // Store the latest measurement in our historical data buffer.
+    _dataBuffer[_dataBufferIndex] = _hvacData;
+    _dataBufferIndex = (_dataBufferIndex + 1) % DATA_BUFFER_SIZE;
+
+    // Check for alert conditions based on the historical data
+    _hvacData.alertStatus = AlertManager::checkAlerts(_dataBuffer, _configManager.getConfig());
+
+    // Check if it's time to perform an aggregation cycle.
+    _aggregationCycleCounter++;
+    if (_aggregationCycleCounter >= DATA_BUFFER_SIZE) {
+        performAggregation();
+        _aggregationCycleCounter = 0;
+    }
+
+    // Log the current status to the serial monitor for debugging.
+    logStatus();
+}
+
+void Application::logStatus() {
+#ifdef ARDUINO
+    // This provides a concise summary of the system state to the serial monitor.
+    Serial.printf("[Status] Ret: %.2fC, Sup: %.2fC, dT: %.2fC | Fan: %.2fA, Comp: %.2fA, Pumps: %.2fA | Alert: %d\n",
+                  _hvacData.returnTempC,
+                  _hvacData.supplyTempC,
+                  _hvacData.deltaT,
+                  _hvacData.fanAmps,
+                  _hvacData.compressorAmps,
+                  _hvacData.geoPumpsAmps,
+                  static_cast<int>(_hvacData.alertStatus));
+#endif
 }
 
 void Application::performAggregation() {
@@ -101,4 +111,32 @@ void Application::performAggregation() {
     Serial.printf("[App] Performed data aggregation cycle. Avg dT: %.2f\n", aggregatedData.avgDeltaT);
 
     _networkManager.publishAggregatedData();
+}
+
+void Application::setupSerial() {
+    Serial.begin(115200);
+    while (!Serial);
+}
+
+void Application::setupFileSystem() {
+    if(!_spiffs.begin()){
+        Serial.println("CRITICAL ERROR: An Error has occurred while mounting SPIFFS. Halting.");
+        while(1) { delay(1000); } // Halt execution
+    }
+    _logManager.begin(); // This is now empty but kept for consistency.
+    _logManager.log("System boot. Version: %s", FIRMWARE_VERSION);
+}
+
+void Application::setupHardware() {
+    _tempSensors.begin();
+    _fanMonitor.current(FAN_CT_PIN, CT_CALIBRATION);
+    _compressorMonitor.current(COMPRESSOR_CT_PIN, CT_CALIBRATION);
+    _pumpsMonitor.current(PUMPS_CT_PIN, CT_CALIBRATION);
+}
+
+void Application::setupWatchdog() {
+    // Initialize the watchdog timer. If the main loop freezes for more than
+    // WATCHDOG_TIMEOUT_S, the ESP32 will automatically reboot.
+    esp_task_wdt_init(WATCHDOG_TIMEOUT_S, true); // true = panic on timeout
+    esp_task_wdt_add(NULL); // Add current task (main loop) to watchdog
 }

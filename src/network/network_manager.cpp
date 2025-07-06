@@ -1,4 +1,5 @@
 #include "network_manager.h"
+#include "application.h" // Provides full definition for AppDataContext
 #include "logic/json_builder.h"
 #include "config/config_manager.h"
 #include "config.h"
@@ -15,16 +16,10 @@
 
 const long MQTT_RECONNECT_INTERVAL = 5000;
 
-NetworkManager::NetworkManager(HVACData& latestData,
-                               const std::array<HVACData, DATA_BUFFER_SIZE>& dataBuffer, const size_t& bufferIndex,
-                               const std::array<AggregatedHVACData, AGGREGATED_DATA_BUFFER_SIZE>& aggregatedBuffer, const size_t& aggregatedBufferIndex,
+NetworkManager::NetworkManager(AppDataContext& context,
                                ConfigManager& configManager,
                                LogManager& logManager)
-    : _hvacData(latestData),
-      _dataBuffer(dataBuffer),
-      _bufferIndex(bufferIndex),
-      _aggregatedDataBuffer(aggregatedBuffer),
-      _aggregatedBufferIndex(aggregatedBufferIndex),
+    : _appDataContext(context),
       _configManager(configManager),
       _logManager(logManager),
       _client(_net),
@@ -46,44 +41,27 @@ void NetworkManager::setupWiFi() {
 }
 
 void NetworkManager::setupWebInterface() {
+    setupMqtt();
+    setupApiRoutes();
+    setupStaticFileServer();
+
+    _server.onNotFound([](AsyncWebServerRequest *request){
+        request->send(404, "text/plain", "Not found");
+    });
+
+    _server.begin();
+    _logManager.log("HTTP server started");
+}
+
+void NetworkManager::setupMqtt() {
     // Configure MQTT client
     _net.setCACert(AWS_CERT_CA);
     _net.setCertificate(AWS_CERT_CRT);
     _net.setPrivateKey(AWS_CERT_PRIVATE);
     _client.setServer(AWS_IOT_ENDPOINT, 8883);
+}
 
-    // Setup the web server routes
-    if(!SPIFFS.begin(true)){
-        _logManager.log("ERROR: An Error has occurred while mounting SPIFFS");
-        return;
-    }
-
-    // Route for the JSON data API. Accesses the global hvacData struct.
-    _server.on("/api/data", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        char buffer[512];
-        JsonBuilder::buildPayload(_hvacData, FIRMWARE_VERSION, BUILD_DATE, buffer, sizeof(buffer));
-        request->send(200, "application/json", buffer);
-    });
-
-    // Route for the historical data buffer
-    _server.on("/api/history", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        // Use a dynamic response to handle the larger payload of the history buffer
-        AsyncJsonResponse * response = new AsyncJsonResponse();
-        JsonArray root = response->getRoot().to<JsonArray>();
-        JsonBuilder::buildHistoryJson(root, _dataBuffer, _bufferIndex);
-        response->setLength();
-        request->send(response);
-    });
-
-    // Route for the aggregated historical data buffer
-    _server.on("/api/aggregated_history", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        AsyncJsonResponse * response = new AsyncJsonResponse();
-        JsonArray root = response->getRoot().to<JsonArray>();
-        JsonBuilder::buildAggregatedHistoryJson(root, _aggregatedDataBuffer, _aggregatedBufferIndex);
-        response->setLength();
-        request->send(response);
-    });
-
+void NetworkManager::setupSettingsRoutes() {
     // Route to get current settings
     _server.on("/api/settings", HTTP_GET, [this](AsyncWebServerRequest *request) {
         AsyncJsonResponse * response = new AsyncJsonResponse();
@@ -115,7 +93,9 @@ void NetworkManager::setupWebInterface() {
     });
     settingsPostHandler->setMethod(HTTP_POST);
     _server.addHandler(settingsPostHandler);
+}
 
+void NetworkManager::setupSystemRoutes() {
     // Route to trigger a device reboot
     _server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Rebooting...\"}");
@@ -155,18 +135,42 @@ void NetworkManager::setupWebInterface() {
         response->setLength();
         request->send(response);
     });
+}
 
-    // Serve static web interface files from SPIFFS root
+void NetworkManager::setupApiRoutes() {
+    _server.on("/api/data", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        char buffer[512];
+        JsonBuilder::buildPayload(_appDataContext.latestData, FIRMWARE_VERSION, BUILD_DATE, buffer, sizeof(buffer));
+        request->send(200, "application/json", buffer);
+    });
+
+    // Route for the historical data buffer
+    _server.on("/api/history", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        // Use a dynamic response to handle the larger payload of the history buffer
+        AsyncJsonResponse * response = new AsyncJsonResponse();
+        JsonArray root = response->getRoot().to<JsonArray>();
+        JsonBuilder::buildHistoryJson(root, _appDataContext.dataBuffer, _appDataContext.bufferIndex);
+        response->setLength();
+        request->send(response);
+    });
+
+    // Route for the aggregated historical data buffer
+    _server.on("/api/aggregated_history", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        AsyncJsonResponse * response = new AsyncJsonResponse();
+        JsonArray root = response->getRoot().to<JsonArray>();
+        JsonBuilder::buildAggregatedHistoryJson(root, _appDataContext.aggregatedBuffer, _appDataContext.aggregatedBufferIndex);
+        response->setLength();
+        request->send(response);
+    });
+
+    setupSettingsRoutes();
+    setupSystemRoutes();
+}
+
+void NetworkManager::setupStaticFileServer() {
     _server.serveStatic("/", SPIFFS, "/")
         .setDefaultFile("index.html")
         .setCacheControl("max-age=3600");
-
-    _server.onNotFound([](AsyncWebServerRequest *request){
-        request->send(404, "text/plain", "Not found");
-    });
-
-    _server.begin();
-    _logManager.log("HTTP server started");
 }
 
 void NetworkManager::handleClient() {
@@ -193,8 +197,8 @@ void NetworkManager::publishAggregatedData() {
 
     // Get the most recently added aggregated data point.
     // The current index points to the *next* slot to be filled, so we go back one.
-    size_t latestIndex = (_aggregatedBufferIndex + AGGREGATED_DATA_BUFFER_SIZE - 1) % AGGREGATED_DATA_BUFFER_SIZE;
-    const AggregatedHVACData& dataToPublish = _aggregatedDataBuffer[latestIndex];
+    size_t latestIndex = (_appDataContext.aggregatedBufferIndex + AGGREGATED_DATA_BUFFER_SIZE - 1) % AGGREGATED_DATA_BUFFER_SIZE;
+    const AggregatedHVACData& dataToPublish = _appDataContext.aggregatedBuffer[latestIndex];
 
     // Don't publish if the entry is uninitialized
     if (dataToPublish.timestamp == 0) {

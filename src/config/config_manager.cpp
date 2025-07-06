@@ -1,14 +1,21 @@
 #include "config_manager.h"
 #include "config.h" // For default values
-#ifdef ARDUINO
-#include <SPIFFS.h>
-#include <Arduino.h> // For Serial object
-#else
-#include <SPIFFS.h> // Use mock for native tests (path is handled by build flags)
-#endif
+#include "fs/IFileSystem.h"
 #include <ArduinoJson.h>
 
 const char* CONFIG_FILE = "/config.json";
+
+// A helper class to adapt our IFile interface for ArduinoJson's serializeJson function.
+class JsonPrintAdapter {
+public:
+    explicit JsonPrintAdapter(IFile& file) : _file(file) {}
+    size_t write(uint8_t c) { return _file.write(c); }
+    size_t write(const uint8_t *buffer, size_t size) { return _file.write(buffer, size); }
+private:
+    IFile& _file;
+};
+
+ConfigManager::ConfigManager(IFileSystem& fs) : _fs(fs) {}
 
 void ConfigManager::load() {
     // Set defaults first in case loading fails
@@ -17,7 +24,7 @@ void ConfigManager::load() {
     _config.noAirflowDurationS = NO_AIRFLOW_DURATION_S;
     _config.tempSensorDisconnectedDurationS = TEMP_SENSOR_DISCONNECTED_DURATION_S;
 
-    if (!SPIFFS.exists(CONFIG_FILE)) {
+    if (!_fs.exists(CONFIG_FILE)) {
 #ifdef ARDUINO
         Serial.println("Config file not found, creating with default values.");
 #endif
@@ -25,7 +32,7 @@ void ConfigManager::load() {
         return;
     }
 
-    auto configFile = SPIFFS.open(CONFIG_FILE, "r");
+    auto configFile = _fs.open(CONFIG_FILE, "r");
     if (!configFile) {
         // This case is unlikely if exists() passed, but good to handle.
         // We'll just use the defaults already set.
@@ -33,8 +40,8 @@ void ConfigManager::load() {
     }
 
     JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, configFile);
-    configFile.close(); // Close file as soon as we're done with it.
+    DeserializationError error = deserializeJson(doc, *configFile);
+    configFile->close(); // Close file as soon as we're done with it.
 
     if (error) {
 #ifdef ARDUINO
@@ -54,7 +61,7 @@ void ConfigManager::load() {
 }
 
 void ConfigManager::save() {
-    auto configFile = SPIFFS.open(CONFIG_FILE, "w");
+    auto configFile = _fs.open(CONFIG_FILE, "w");
     if (!configFile) {
 #ifdef ARDUINO
         Serial.println("Failed to create config file for saving.");
@@ -68,7 +75,8 @@ void ConfigManager::save() {
     doc["noAirflowDurationS"] = _config.noAirflowDurationS;
     doc["tempSensorDisconnectedDurationS"] = _config.tempSensorDisconnectedDurationS;
 
-    if (serializeJson(doc, configFile) == 0) {
+    JsonPrintAdapter adapter(*configFile);
+    if (serializeJson(doc, adapter) == 0) {
 #ifdef ARDUINO
         Serial.println("Failed to write to config file.");
 #endif
@@ -77,12 +85,12 @@ void ConfigManager::save() {
         Serial.println("Configuration saved to SPIFFS.");
 #endif
     }
-    configFile.close();
+    configFile->close();
 }
 
 void ConfigManager::remove() {
-    if (SPIFFS.exists(CONFIG_FILE)) {
-        SPIFFS.remove(CONFIG_FILE);
+    if (_fs.exists(CONFIG_FILE)) {
+        _fs.remove(CONFIG_FILE);
 #ifdef ARDUINO
         Serial.println("Configuration file removed.");
 #endif
