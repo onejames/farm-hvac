@@ -1,5 +1,5 @@
 #include "network_manager.h"
-#include "application.h" // Provides full definition for AppDataContext
+#include "state/SystemState.h"
 #include "logic/json_builder.h"
 #include "config/config_manager.h"
 #include "config.h"
@@ -16,10 +16,10 @@
 
 const long MQTT_RECONNECT_INTERVAL = 5000;
 
-NetworkManager::NetworkManager(AppDataContext& context,
+NetworkManager::NetworkManager(SystemState& systemState,
                                ConfigManager& configManager,
                                LogManager& logManager)
-    : _appDataContext(context),
+    : _systemState(systemState),
       _configManager(configManager),
       _logManager(logManager),
       _client(_net),
@@ -140,7 +140,7 @@ void NetworkManager::setupSystemRoutes() {
 void NetworkManager::setupApiRoutes() {
     _server.on("/api/data", HTTP_GET, [this](AsyncWebServerRequest *request) {
         char buffer[512];
-        JsonBuilder::buildPayload(_appDataContext.latestData, FIRMWARE_VERSION, BUILD_DATE, buffer, sizeof(buffer));
+        JsonBuilder::buildPayload(_systemState.getLatestData(), FIRMWARE_VERSION, BUILD_DATE, buffer, sizeof(buffer));
         request->send(200, "application/json", buffer);
     });
 
@@ -149,7 +149,7 @@ void NetworkManager::setupApiRoutes() {
         // Use a dynamic response to handle the larger payload of the history buffer
         AsyncJsonResponse * response = new AsyncJsonResponse();
         JsonArray root = response->getRoot().to<JsonArray>();
-        JsonBuilder::buildHistoryJson(root, _appDataContext.dataBuffer, _appDataContext.bufferIndex);
+        JsonBuilder::buildHistoryJson(root, _systemState.getDataBuffer(), _systemState.getBufferIndex());
         response->setLength();
         request->send(response);
     });
@@ -158,7 +158,7 @@ void NetworkManager::setupApiRoutes() {
     _server.on("/api/aggregated_history", HTTP_GET, [this](AsyncWebServerRequest *request) {
         AsyncJsonResponse * response = new AsyncJsonResponse();
         JsonArray root = response->getRoot().to<JsonArray>();
-        JsonBuilder::buildAggregatedHistoryJson(root, _appDataContext.aggregatedBuffer, _appDataContext.aggregatedBufferIndex);
+        JsonBuilder::buildAggregatedHistoryJson(root, _systemState.getAggregatedDataBuffer(), _systemState.getAggregatedBufferIndex());
         response->setLength();
         request->send(response);
     });
@@ -197,8 +197,8 @@ void NetworkManager::publishAggregatedData() {
 
     // Get the most recently added aggregated data point.
     // The current index points to the *next* slot to be filled, so we go back one.
-    size_t latestIndex = (_appDataContext.aggregatedBufferIndex + AGGREGATED_DATA_BUFFER_SIZE - 1) % AGGREGATED_DATA_BUFFER_SIZE;
-    const AggregatedHVACData& dataToPublish = _appDataContext.aggregatedBuffer[latestIndex];
+    size_t latestIndex = (_systemState.getAggregatedBufferIndex() + AGGREGATED_DATA_BUFFER_SIZE - 1) % AGGREGATED_DATA_BUFFER_SIZE;
+    const AggregatedHVACData& dataToPublish = _systemState.getAggregatedDataBuffer()[latestIndex];
 
     // Don't publish if the entry is uninitialized
     if (dataToPublish.timestamp == 0) {

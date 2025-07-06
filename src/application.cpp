@@ -6,22 +6,15 @@
 #include "esp_task_wdt.h"
 
 Application::Application()
-    // Initialize hardware objects
-    : _oneWire(ONE_WIRE_BUS_PIN),
-      _tempSensors(&_oneWire),
-    // Initialize adapters, passing references to the hardware objects
-      _tempAdapter(_tempSensors),
-      _fanAdapter(_fanMonitor),
-      _compressorAdapter(_compressorMonitor),
-      _pumpsAdapter(_pumpsMonitor),
-      _appDataContext{_hvacData, _dataBuffer, _dataBufferIndex, _aggregatedDataBuffer, _aggregatedDataBufferIndex},
-    // Initialize managers in the order they are declared in the header for clarity and correctness.
+    : _systemState(),
+      _aggregationCycleCounter(0),
+      _hardwareManager(),
       _spiffs(),
       _configManager(_spiffs),
       _logManager(_spiffs),
-      _dataManager(_tempAdapter, _fanAdapter, _compressorAdapter, _pumpsAdapter, returnAirSensorAddress, supplyAirSensorAddress),
-      _networkManager(_appDataContext, _configManager, _logManager),
-      _displayManager(), _dataBufferIndex(0), _aggregatedDataBufferIndex(0), _aggregationCycleCounter(0),
+      _dataManager(_hardwareManager.getTempAdapter(), _hardwareManager.getFanAdapter(), _hardwareManager.getCompressorAdapter(), _hardwareManager.getPumpsAdapter(), returnAirSensorAddress, supplyAirSensorAddress),
+      _networkManager(_systemState, _configManager, _logManager),
+      _displayManager(),
       _lastSensorReadTime(0) {}
 
 void Application::setup() {
@@ -62,19 +55,18 @@ void Application::loop() {
     }
 
     // The display can update on its own, more frequent schedule
-    _displayManager.update(_hvacData);
+    _displayManager.update(_systemState.getLatestData());
 }
 
 void Application::performSensorReadCycle() {
     // Read sensor data and process it into the _hvacData member.
-    _dataManager.readAndProcessData(_hvacData, ADC_SAMPLES, AMPS_ON_THRESHOLD);
+    _dataManager.readAndProcessData(_systemState.getLatestData(), ADC_SAMPLES, AMPS_ON_THRESHOLD);
 
     // Store the latest measurement in our historical data buffer.
-    _dataBuffer[_dataBufferIndex] = _hvacData;
-    _dataBufferIndex = (_dataBufferIndex + 1) % DATA_BUFFER_SIZE;
+    _systemState.recordLatestData();
 
     // Check for alert conditions based on the historical data
-    _hvacData.alertStatus = AlertManager::checkAlerts(_dataBuffer, _configManager.getConfig());
+    _systemState.getLatestData().alertStatus = AlertManager::checkAlerts(_systemState.getDataBuffer(), _configManager.getConfig());
 
     // Check if it's time to perform an aggregation cycle.
     _aggregationCycleCounter++;
@@ -90,24 +82,24 @@ void Application::performSensorReadCycle() {
 void Application::logStatus() {
 #ifdef ARDUINO
     // This provides a concise summary of the system state to the serial monitor.
+    const HVACData& data = _systemState.getLatestData();
     Serial.printf("[Status] Ret: %.2fC, Sup: %.2fC, dT: %.2fC | Fan: %.2fA, Comp: %.2fA, Pumps: %.2fA | Alert: %d\n",
-                  _hvacData.returnTempC,
-                  _hvacData.supplyTempC,
-                  _hvacData.deltaT,
-                  _hvacData.fanAmps,
-                  _hvacData.compressorAmps,
-                  _hvacData.geoPumpsAmps,
-                  static_cast<int>(_hvacData.alertStatus));
+                  data.returnTempC,
+                  data.supplyTempC,
+                  data.deltaT,
+                  data.fanAmps,
+                  data.compressorAmps,
+                  data.geoPumpsAmps,
+                  static_cast<int>(data.alertStatus));
 #endif
 }
 
 void Application::performAggregation() {
     // Use the dedicated aggregator to calculate the averages and capture final state
-    AggregatedHVACData aggregatedData = DataAggregator::aggregate(_dataBuffer, _hvacData);
+    AggregatedHVACData aggregatedData = DataAggregator::aggregate(_systemState.getDataBuffer(), _systemState.getLatestData());
     aggregatedData.timestamp = millis();
 
-    _aggregatedDataBuffer[_aggregatedDataBufferIndex] = aggregatedData;
-    _aggregatedDataBufferIndex = (_aggregatedDataBufferIndex + 1) % AGGREGATED_DATA_BUFFER_SIZE;
+    _systemState.addAggregatedData(aggregatedData);
     Serial.printf("[App] Performed data aggregation cycle. Avg dT: %.2f\n", aggregatedData.avgDeltaT);
 
     _networkManager.publishAggregatedData();
@@ -128,10 +120,7 @@ void Application::setupFileSystem() {
 }
 
 void Application::setupHardware() {
-    _tempSensors.begin();
-    _fanMonitor.current(FAN_CT_PIN, CT_CALIBRATION);
-    _compressorMonitor.current(COMPRESSOR_CT_PIN, CT_CALIBRATION);
-    _pumpsMonitor.current(PUMPS_CT_PIN, CT_CALIBRATION);
+    _hardwareManager.setup();
 }
 
 void Application::setupWatchdog() {

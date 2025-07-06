@@ -6,13 +6,13 @@
 #include <ESPAsyncWebServer.h>
 
 // Forward declare dependencies to reduce header includes
-struct AppDataContext;
+class SystemState;
 class ConfigManager;
 class LogManager;
 
 class NetworkManager {
 public:
-    explicit NetworkManager(AppDataContext& context,
+    explicit NetworkManager(SystemState& systemState,
                            ConfigManager& configManager,
                            LogManager& logManager);
 
@@ -29,7 +29,7 @@ private:
     void setupSystemRoutes();
     void setupStaticFileServer();
 
-    AppDataContext& _appDataContext;
+    SystemState& _systemState;
     ConfigManager& _configManager;
     LogManager& _logManager;
 
