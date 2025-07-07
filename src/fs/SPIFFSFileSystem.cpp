@@ -1,5 +1,6 @@
 #include "SPIFFSFileSystem.h"
 
+#ifdef ARDUINO
 // --- SPIFFSFile ---
 SPIFFSFile::SPIFFSFile(File file) : _file(file) {}
 SPIFFSFile::~SPIFFSFile() {
@@ -45,3 +46,32 @@ std::unique_ptr<IFile> SPIFFSFileSystem::open(const char* path, const char* mode
     }
     return std::unique_ptr<IFile>(new SPIFFSFile(file));
 }
+#else
+// Native build "hollow" implementations
+
+// --- SPIFFSFile ---
+SPIFFSFile::~SPIFFSFile() {}
+size_t SPIFFSFile::write(uint8_t) { return 0; }
+size_t SPIFFSFile::write(const uint8_t*, size_t) { return 0; }
+int SPIFFSFile::read() { return -1; }
+size_t SPIFFSFile::readBytes(char*, size_t) { return 0; }
+void SPIFFSFile::print(const char*) {}
+void SPIFFSFile::println(const char*) {}
+String SPIFFSFile::readString() { return String(); }
+size_t SPIFFSFile::size() { return 0; }
+void SPIFFSFile::close() {}
+SPIFFSFile::operator bool() const { return false; }
+
+// --- SPIFFSFileSystem ---
+SPIFFSFileSystem::SPIFFSFileSystem() {}
+SPIFFSFileSystem::~SPIFFSFileSystem() {}
+bool SPIFFSFileSystem::begin() { return true; }
+bool SPIFFSFileSystem::exists(const char*) { return false; }
+bool SPIFFSFileSystem::remove(const char*) { return false; }
+bool SPIFFSFileSystem::rename(const char*, const char*) { return false; }
+std::unique_ptr<IFile> SPIFFSFileSystem::open(const char*, const char*) {
+    // Return a new, empty (and invalid) file object
+    return std::make_unique<SPIFFSFile>();
+}
+
+#endif

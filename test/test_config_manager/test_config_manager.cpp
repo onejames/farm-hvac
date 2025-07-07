@@ -4,16 +4,12 @@
 #include "mocks/MockFileSystem.h"
 #include <ArduinoJson.h>
 
-MockFileSystem mockFS;
-
-void setUp(void) {
-    // Reset the mock filesystem state before each test
-    mockFS.reset();
-}
+void setUp(void) {}
 
 void tearDown(void) {}
 
 void test_load_creates_default_file_if_not_exists() {
+    MockFileSystem mockFS;
     ConfigManager cm(mockFS);
     cm.load(); // Should detect file doesn't exist and call save()
 
@@ -27,6 +23,7 @@ void test_load_creates_default_file_if_not_exists() {
 }
 
 void test_load_parses_existing_file() {
+    MockFileSystem mockFS;
     ConfigManager cm(mockFS);
 
     // Programmatically create the test JSON to make the test more robust and maintainable.
@@ -48,6 +45,7 @@ void test_load_parses_existing_file() {
 }
 
 void test_save_writes_correct_json() {
+    MockFileSystem mockFS;
     ConfigManager cm(mockFS);
     cm.getConfig().lowDeltaTThreshold = 9.9f;
     cm.getConfig().lowDeltaTDurationS = 999;
@@ -61,6 +59,7 @@ void test_save_writes_correct_json() {
 }
 
 void test_remove_deletes_file() {
+    MockFileSystem mockFS;
     ConfigManager cm(mockFS);
     // Simulate that the file exists initially
     mockFS.setFileContent("/config.json", "{\"some\":\"data\"}");

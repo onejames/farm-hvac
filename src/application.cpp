@@ -1,23 +1,51 @@
 #include "application.h"
+#include <memory> // For std::make_unique
 #include "config.h"
-#include <SPIFFS.h>
+#include "network/PubSubClientWrapper.h"
 #include "secrets.h"
 #include "version.h"
-#include "esp_task_wdt.h"
 
-Application::Application()
+#ifdef ARDUINO
+#include <SPIFFS.h>
+#include "esp_task_wdt.h"
+#else
+// Provide mock implementations for Arduino-specific functions like millis() for native tests
+#include "mocks/Arduino.h"
+#endif
+
+#ifdef ARDUINO
+Application::Application() // Full constructor for hardware builds
     : _systemState(),
       _aggregationCycleCounter(0),
+      _net(),
+      _mqttClient(_net),
       _hardwareManager(),
       _spiffs(),
       _configManager(_spiffs),
       _logManager(_spiffs),
-      _dataManager(_hardwareManager.getTempAdapter(), _hardwareManager.getFanAdapter(), _hardwareManager.getCompressorAdapter(), _hardwareManager.getPumpsAdapter(), returnAirSensorAddress, supplyAirSensorAddress),
-      _networkManager(_systemState, _configManager, _logManager),
+      _dataManager(_hardwareManager, returnAirSensorAddress, supplyAirSensorAddress),
+      _webServerManager(_systemState, _configManager, _logManager),
+      _mqttManager(_systemState, _logManager, std::unique_ptr<PubSubClientWrapper>(new PubSubClientWrapper(_mqttClient))),
       _displayManager(),
       _lastSensorReadTime(0) {}
+#else
+Application::Application() // "Hollow" constructor for native testing
+    : _systemState(),
+      _aggregationCycleCounter(0),
+      // _net and _mqttClient do not exist in native builds
+      _hardwareManager(),
+      _spiffs(),
+      _configManager(_spiffs),
+      _logManager(_spiffs),
+      _dataManager(_hardwareManager, {}, {}), // Pass empty device addresses
+      _webServerManager(_systemState, _configManager, _logManager),
+      _mqttManager(_systemState, _logManager, nullptr), // Pass nullptr for the client
+      _displayManager(),
+      _lastSensorReadTime(0) {}
+#endif
 
 void Application::setup() {
+#ifdef ARDUINO
     setupSerial();
     setupFileSystem();
 
@@ -25,10 +53,16 @@ void Application::setup() {
     _configManager.load();
 
     setupHardware();
-
-    // Setup network and web interface
-    _networkManager.setup();
-    _logManager.log("Network setup complete. IP: %s", WiFi.localIP().toString().c_str());
+    
+    // Setup WiFi, WebServer, and MQTT Client
+    setupNetwork();
+    // Configure MQTT client before setting up the manager that uses it
+    _net.setCACert(AWS_CERT_CA);
+    _net.setCertificate(AWS_CERT_CRT);
+    _net.setPrivateKey(AWS_CERT_PRIVATE);
+    _mqttClient.setServer(AWS_IOT_ENDPOINT, 8883);
+    _webServerManager.setup();
+    _logManager.log("Network setup complete. IP: %s", WiFi.localIP().toString().c_str()); // WiFi is guarded in WebServerManager
     
     setupWatchdog();
 
@@ -38,14 +72,17 @@ void Application::setup() {
     }
 
     _logManager.log("Setup complete. Entering main loop.");
+#endif
 }
 
 void Application::loop() {
+#ifdef ARDUINO
     // Feed the watchdog timer on every loop to show that the system is responsive.
     esp_task_wdt_reset();
+#endif
 
     // Handle non-blocking network tasks on every loop
-    _networkManager.handleClient();
+    _mqttManager.handleClient();
 
     // The main sensor read and publish cycle is throttled
     unsigned long currentTime = millis();
@@ -100,23 +137,40 @@ void Application::performAggregation() {
     aggregatedData.timestamp = millis();
 
     _systemState.addAggregatedData(aggregatedData);
+#ifdef ARDUINO
     Serial.printf("[App] Performed data aggregation cycle. Avg dT: %.2f\n", aggregatedData.avgDeltaT);
+#endif
 
-    _networkManager.publishAggregatedData();
+    _mqttManager.publishAggregatedData();
 }
 
 void Application::setupSerial() {
+#ifdef ARDUINO
     Serial.begin(115200);
     while (!Serial);
+#endif
 }
 
 void Application::setupFileSystem() {
+#ifdef ARDUINO
     if(!_spiffs.begin()){
         Serial.println("CRITICAL ERROR: An Error has occurred while mounting SPIFFS. Halting.");
         while(1) { delay(1000); } // Halt execution
     }
+#endif
     _logManager.begin(); // This is now empty but kept for consistency.
     _logManager.log("System boot. Version: %s", FIRMWARE_VERSION);
+}
+
+void Application::setupNetwork() {
+#ifdef ARDUINO
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    _logManager.log("Connecting to WiFi...");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+    }
+#endif
 }
 
 void Application::setupHardware() {
@@ -124,8 +178,10 @@ void Application::setupHardware() {
 }
 
 void Application::setupWatchdog() {
+#ifdef ARDUINO
     // Initialize the watchdog timer. If the main loop freezes for more than
     // WATCHDOG_TIMEOUT_S, the ESP32 will automatically reboot.
     esp_task_wdt_init(WATCHDOG_TIMEOUT_S, true); // true = panic on timeout
     esp_task_wdt_add(NULL); // Add current task (main loop) to watchdog
+#endif
 }

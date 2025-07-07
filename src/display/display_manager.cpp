@@ -2,29 +2,33 @@
 #include "config.h"
 #include "version.h"
 #include "logic/enum_converters.h"
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Wire.h>
-#include <WiFi.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET    -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C
 
+#ifdef ARDUINO
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Wire.h>
+#include <WiFi.h>
+
 const unsigned long DISPLAY_UPDATE_INTERVAL_MS = 1000;
 
 DisplayManager::DisplayManager()
-    : _lastUpdateTime(0), _isSetup(false) {
-    // The Adafruit_SSD1306 library uses the global Wire object, which is configured in setup().
-    _display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+    : _display(nullptr), _lastUpdateTime(0), _isSetup(false) {
+    // Defer display object creation until setup() is called on hardware.
 }
 
 DisplayManager::~DisplayManager() {
-    delete _display;
+    delete _display; // Safe to delete nullptr
 }
 
 bool DisplayManager::setup() {
+    // Allocate the display object now that Wire will be initialized.
+    _display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
     // The I2C bus must be initialized before the display.
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
@@ -74,3 +78,12 @@ void DisplayManager::drawStatusScreen(const HVACData& data) {
 
     _display->display();
 }
+
+#else
+// Native build "hollow" implementations
+DisplayManager::DisplayManager() : _display(nullptr), _lastUpdateTime(0), _isSetup(false) {}
+DisplayManager::~DisplayManager() {} // Destructor is empty, _display is nullptr
+bool DisplayManager::setup() { _isSetup = true; return true; }
+void DisplayManager::update(const HVACData& /*data*/) {}
+void DisplayManager::drawStatusScreen(const HVACData& /*data*/) {}
+#endif

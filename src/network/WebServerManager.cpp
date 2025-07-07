@@ -1,47 +1,31 @@
-#include "network_manager.h"
+#include "WebServerManager.h"
 #include "state/SystemState.h"
 #include "logic/json_builder.h"
 #include "config/config_manager.h"
 #include "config.h"
 #include "logging/log_manager.h"
 #include "logic/settings_validator.h"
-#include <WiFi.h>
+#ifdef ARDUINO
 #include <Esp.h>
 #include <SPIFFS.h>
-#include "secrets.h"
 #include "version.h"
-#include "adapters/pubsub_client_adapter.h"
 #include <ArduinoJson.h>
 #include <AsyncJson.h>
+#endif
 
-const long MQTT_RECONNECT_INTERVAL = 5000;
-
-NetworkManager::NetworkManager(SystemState& systemState,
-                               ConfigManager& configManager,
-                               LogManager& logManager)
+WebServerManager::WebServerManager(SystemState& systemState,
+                                   ConfigManager& configManager,
+                                   LogManager& logManager)
     : _systemState(systemState),
       _configManager(configManager),
-      _logManager(logManager),
-      _client(_net),
-      _server(80),
-      _lastMqttReconnectAttempt(0) {}
+      _logManager(logManager)
+#ifdef ARDUINO
+      , _server(80)
+#endif
+{}
 
-void NetworkManager::setup() {
-    setupWiFi();
-    setupWebInterface();
-}
-
-void NetworkManager::setupWiFi() {
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    _logManager.log("Connecting to WiFi...");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-    }
-}
-
-void NetworkManager::setupWebInterface() {
-    setupMqtt();
+void WebServerManager::setup() {
+#ifdef ARDUINO
     setupApiRoutes();
     setupStaticFileServer();
 
@@ -51,17 +35,11 @@ void NetworkManager::setupWebInterface() {
 
     _server.begin();
     _logManager.log("HTTP server started");
+#endif
 }
 
-void NetworkManager::setupMqtt() {
-    // Configure MQTT client
-    _net.setCACert(AWS_CERT_CA);
-    _net.setCertificate(AWS_CERT_CRT);
-    _net.setPrivateKey(AWS_CERT_PRIVATE);
-    _client.setServer(AWS_IOT_ENDPOINT, 8883);
-}
-
-void NetworkManager::setupSettingsRoutes() {
+void WebServerManager::setupSettingsRoutes() {
+#ifdef ARDUINO
     // Route to get current settings
     _server.on("/api/settings", HTTP_GET, [this](AsyncWebServerRequest *request) {
         AsyncJsonResponse * response = new AsyncJsonResponse();
@@ -93,9 +71,11 @@ void NetworkManager::setupSettingsRoutes() {
     });
     settingsPostHandler->setMethod(HTTP_POST);
     _server.addHandler(settingsPostHandler);
+#endif
 }
 
-void NetworkManager::setupSystemRoutes() {
+void WebServerManager::setupSystemRoutes() {
+#ifdef ARDUINO
     // Route to trigger a device reboot
     _server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Rebooting...\"}");
@@ -135,9 +115,11 @@ void NetworkManager::setupSystemRoutes() {
         response->setLength();
         request->send(response);
     });
+#endif
 }
 
-void NetworkManager::setupApiRoutes() {
+void WebServerManager::setupApiRoutes() {
+#ifdef ARDUINO
     _server.on("/api/data", HTTP_GET, [this](AsyncWebServerRequest *request) {
         char buffer[512];
         JsonBuilder::buildPayload(_systemState.getLatestData(), FIRMWARE_VERSION, BUILD_DATE, buffer, sizeof(buffer));
@@ -165,58 +147,13 @@ void NetworkManager::setupApiRoutes() {
 
     setupSettingsRoutes();
     setupSystemRoutes();
+#endif
 }
 
-void NetworkManager::setupStaticFileServer() {
+void WebServerManager::setupStaticFileServer() {
+#ifdef ARDUINO
     _server.serveStatic("/", SPIFFS, "/")
         .setDefaultFile("index.html")
         .setCacheControl("max-age=3600");
-}
-
-void NetworkManager::handleClient() {
-    if (!_client.connected()) {
-        long now = millis();
-        if (now - _lastMqttReconnectAttempt > MQTT_RECONNECT_INTERVAL) {
-            _lastMqttReconnectAttempt = now;
-            _logManager.log("[MQTT] Attempting to connect to AWS IoT...");
-            if (_client.connect(THINGNAME)) {
-                _logManager.log("[MQTT] Connected!");
-            } else {
-                _logManager.log("[MQTT] Connection failed, rc=%d. Retrying in 5 seconds...", _client.state());
-            }
-        }
-    } else {
-        _client.loop();
-    }
-}
-
-void NetworkManager::publishAggregatedData() {
-    if (!_client.connected()) {
-        return;
-    }
-
-    // Get the most recently added aggregated data point.
-    // The current index points to the *next* slot to be filled, so we go back one.
-    size_t latestIndex = (_systemState.getAggregatedBufferIndex() + AGGREGATED_DATA_BUFFER_SIZE - 1) % AGGREGATED_DATA_BUFFER_SIZE;
-    const AggregatedHVACData& dataToPublish = _systemState.getAggregatedDataBuffer()[latestIndex];
-
-    // Don't publish if the entry is uninitialized
-    if (dataToPublish.timestamp == 0) {
-        return;
-    }
-
-    char payload[512];
-    size_t payload_size = JsonBuilder::buildPayload(dataToPublish, FIRMWARE_VERSION, BUILD_DATE, payload, sizeof(payload));
-
-    if (payload_size == 0) {
-        _logManager.log("[MQTT] ERROR: Aggregated JSON serialization failed.");
-        return;
-    }
-
-    PubSubClientAdapter mqttAdapter(_client);
-    if (!mqttAdapter.publish(AWS_IOT_TOPIC, reinterpret_cast<const uint8_t*>(payload), payload_size)) {
-        _logManager.log("[MQTT] ERROR: Aggregated data publish failed. Message may be too large for MQTT buffer.");
-    } else {
-        _logManager.log("[MQTT] Published aggregated data.");
-    }
+#endif
 }

@@ -2,15 +2,12 @@
 #include "logging/log_manager.h"
 #include "mocks/MockFileSystem.h"
 
-MockFileSystem mockFS;
-
-void setUp(void) {
-    mockFS.reset();
-}
+void setUp(void) {}
 
 void tearDown(void) {}
 
 void test_log_writes_to_file() {
+    MockFileSystem mockFS;
     LogManager lm(mockFS);
 
     lm.log("Test message %d", 123);
@@ -21,6 +18,7 @@ void test_log_writes_to_file() {
 }
 
 void test_getLogs_reads_file_content() {
+    MockFileSystem mockFS;
     LogManager lm(mockFS);
     mockFS.setFileContent("/system.log", "Hello Log");
 
@@ -30,6 +28,7 @@ void test_getLogs_reads_file_content() {
 }
 
 void test_clearLogs_removes_files() {
+    MockFileSystem mockFS;
     LogManager lm(mockFS);
     mockFS.setFileContent("/system.log", "data");
     mockFS.setFileContent("/system.log.old", "old_data");
@@ -43,6 +42,7 @@ void test_clearLogs_removes_files() {
 }
 
 void test_log_rotation_works_correctly() {
+    MockFileSystem mockFS;
     LogManager lm(mockFS);
 
     // Create a log content that is already over the max size to guarantee rotation.

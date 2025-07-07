@@ -1,6 +1,6 @@
 # HVAC Monitoring System for ESP32
 
-**Version:** v0.4.11 (Built: 2025-07-06 14:59:17)
+**Version:** v0.4.11-1-g2965966-dirty (Built: 2025-07-06 21:07:48)
 
 ## Introduction
 
@@ -37,7 +37,9 @@ The project is organized into several key modules within the `src/` directory:
 *   `hvac_data.h`: Defines the `HVACData` and `AggregatedHVACData` structs.
 *   `data_processing.cpp/.h`: The `DataManager` class, which handles reading sensors and processing raw data.
 *   `logic/`: Contains stateless utility classes for `AlertManager`, `DataAggregator`, and `JsonBuilder`.
-*   `network_manager.cpp/.h`: The `NetworkManager` class, which manages Wi-Fi, the web server, and MQTT.
+*   `state/`: The `SystemState` class, which encapsulates all core data buffers and state.
+*   `hardware/`: The `HardwareManager` class, which owns and initializes all hardware objects.
+*   `network/`: Contains the `WebServerManager` and `MqttManager` classes, which handle local web and cloud communication respectively.
 *   `display/`: The `DisplayManager` class for the OLED screen.
 *   `config.h`: A centralized header file that declares all hardware and application configuration constants.
 *   `config.cpp`: Defines the values for the constants declared in `config.h`.

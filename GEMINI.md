@@ -38,8 +38,11 @@ The project follows a modular, object-oriented design to separate concerns. All 
 *   **`data_processing.cpp` / `.h`**:
     *   The `DataManager` class encapsulates all logic for reading sensors and processing raw data into meaningful state.
 
-*   **`network_manager.cpp` / `.h`**:
-    *   The `NetworkManager` class manages all network tasks: Wi-Fi, the local web server, and AWS IoT MQTT communication.
+*   **`state/SystemState.h`**:
+    *   Encapsulates all core data buffers and state variables.
+
+*   **`network/`**:
+    *   Contains the `WebServerManager` for the local web UI and the `MqttManager` for AWS IoT communication.
 
 *   **`config.h`**:
     *   A centralized header file that **declares** all global configuration constants using `extern`. This allows any module to `#include` it and be aware of the configuration variables.

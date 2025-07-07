@@ -2,11 +2,17 @@
 #define SPIFFS_FILE_SYSTEM_H
 
 #include "IFileSystem.h"
+#ifdef ARDUINO
 #include <SPIFFS.h>
+#endif
 
 class SPIFFSFile : public IFile {
 public:
+#ifdef ARDUINO
     explicit SPIFFSFile(File file);
+#else
+    SPIFFSFile() = default;
+#endif
     ~SPIFFSFile() override;
 
     size_t write(uint8_t c) override;
@@ -21,7 +27,9 @@ public:
     operator bool() const override;
 
 private:
+#ifdef ARDUINO
     File _file;
+#endif
 };
 
 class SPIFFSFileSystem : public IFileSystem {
